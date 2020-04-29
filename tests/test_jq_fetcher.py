@@ -10,7 +10,7 @@ import unittest
 import arrow
 from omicron.core import FrameType
 from omicron.core.lang import async_run
-from jqadaptor.fetcher import Fetcher
+from jqadaptor import create_instance
 
 logger = logging.getLogger(__file__)
 
@@ -21,8 +21,7 @@ class TestJQ(unittest.TestCase):
         account = os.environ['jq_account']
         password = os.environ['jq_password']
 
-        self.fetcher = Fetcher()
-        await self.fetcher.init(account, password)
+        self.fetcher = await create_instance(account=account, password=password)
 
     @async_run
     async def test_get_security_list(self):
