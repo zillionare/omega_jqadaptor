@@ -8,6 +8,7 @@ from concurrent.futures.thread import ThreadPoolExecutor
 from omicron.core import FrameType, tf
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import async_concurrent, singleton
+import arrow
 
 try:
     import jqdatasdk as jq
@@ -80,7 +81,15 @@ class Fetcher:
 
     @async_concurrent(_executors)
     def get_security_list(self) -> np.ndarray:
+        """
+
+        Returns:
+
+        """
         types = ['stock', 'fund', 'index', 'futures', 'etf', 'lof']
         securities = jq.get_all_securities(types)
         securities.insert(0, 'code', securities.index)
+        # remove client dependency of pandas
+        securities['start_date'] = securities['start_date'].apply(lambda x: arrow.get(x))
+        securities['end_date'] = securities['end_date'].apply(lambda x: arrow.get(x))
         return securities.values
