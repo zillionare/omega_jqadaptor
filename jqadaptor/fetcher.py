@@ -41,6 +41,7 @@ class Fetcher:
 
         _instance = Fetcher()
         jq.auth(account, password)
+        logger.info("jqdata sdk login success")
 
         # noinspection PyProtectedMember
         if executors is None or executors._max_workers > max_workers:
@@ -67,11 +68,16 @@ class Fetcher:
         if isinstance(end_at, Arrow):
             end_at = end_at.datetime
 
+        if arrow.now() <= arrow.get(end_at):
+            include_now = True
+        else:
+            include_now = False
+
         try:
             logger.info("fetching %s n_bars for %s end_at %s", n_bars, sec, end_at)
             data = jq.get_bars(sec, n_bars, unit=frame_type.value, end_dt=end_at, fq_ref_date=None, df=False,
                                fields=['date', 'open', 'high', 'low', 'close', 'volume', 'money', 'factor'],
-                               include_now=True)
+                               include_now=include_now)
             data.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume', 'amount', 'factor']
             return data
         except Exception as e:
