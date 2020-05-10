@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-
+import datetime
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 
@@ -9,6 +8,7 @@ from omicron.core import FrameType, tf
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import async_concurrent, singleton
 import arrow
+import pytz
 
 try:
     import jqdatasdk as jq
@@ -29,16 +29,20 @@ _executors = None
 @singleton
 class Fetcher:
     """
-    JQFetcher is a subclass of QuotesFetcher, but thanks for duck typing, we don't need file of QuotesFetcher here.
+    JQFetcher is a subclass of QuotesFetcher, but thanks for duck typing, we don't
+    need file of QuotesFetcher here.
     """
+    tz = pytz.timezone('Asia/Chongqing')
 
     def __init__(self):
         pass
 
     @classmethod
-    async def create_instance(cls, account: str, password: str, executors=None, max_workers=1, tz='Asia/Chongqing'):
+    async def create_instance(cls, account: str, password: str, executors=None,
+                              max_workers=1, tz='Asia/Chongqing'):
         global _executors
 
+        cls.tz = pytz.timezone(tz)
         _instance = Fetcher()
         jq.auth(account, password)
         logger.info("jqdata sdk login success")
@@ -52,7 +56,8 @@ class Fetcher:
         return _instance
 
     @async_concurrent(_executors)
-    def get_bars(self, sec: str, end_at: Arrow, n_bars: int, frame_type: FrameType) -> np.array:
+    def get_bars(self, sec: str, end_at: Arrow, n_bars: int,
+                 frame_type: FrameType) -> np.array:
         """
         fetch quotes for security (code), and convert it to a dataframe
         consists of:
@@ -75,10 +80,15 @@ class Fetcher:
 
         try:
             logger.info("fetching %s n_bars for %s end_at %s", n_bars, sec, end_at)
-            data = jq.get_bars(sec, n_bars, unit=frame_type.value, end_dt=end_at, fq_ref_date=None, df=False,
-                               fields=['date', 'open', 'high', 'low', 'close', 'volume', 'money', 'factor'],
+            data = jq.get_bars(sec, n_bars, unit=frame_type.value, end_dt=end_at,
+                               fq_ref_date=None, df=False,
+                               fields=['date', 'open', 'high', 'low', 'close', 'volume',
+                                       'money', 'factor'],
                                include_now=include_now)
-            data.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume', 'amount', 'factor']
+            data.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume',
+                                'amount', 'factor']
+            if hasattr(data['frame'][0], 'astimezone'):  # not a date
+                data['frame'] = [frame.astimezone(self.tz) for frame in data['frame']]
             return data
         except Exception as e:
             logger.exception(e)
@@ -95,7 +105,16 @@ class Fetcher:
         types = ['stock', 'fund', 'index', 'futures', 'etf', 'lof']
         securities = jq.get_all_securities(types)
         securities.insert(0, 'code', securities.index)
+
+        def todate(s):
+            return datetime.date(*map(lambda x: int(x), s.split('-')))
+
         # remove client dependency of pandas
-        securities['start_date'] = securities['start_date'].apply(lambda x: arrow.get(x))
-        securities['end_date'] = securities['end_date'].apply(lambda x: arrow.get(x))
+        securities['start_date'] = securities['start_date'].apply(
+            lambda start: todate(start))
+        securities['end_date'] = securities['end_date'].apply(lambda end: todate(end))
         return securities.values
+
+    @async_concurrent(_executors)
+    def get_all_trade_days(self) -> np.array:
+        return jq.get_all_trade_days()
