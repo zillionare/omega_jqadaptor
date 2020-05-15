@@ -15,7 +15,8 @@ requirements = [
     'ruamel.yaml==0.16',
     'pyemit>=0.4.0',
     'numpy>=1.18.1',
-    'jqdatasdk>=1.8'
+    'jqdatasdk>=1.8',
+    'pytz==2019.3'
 ]
 
 setup_requirements = []

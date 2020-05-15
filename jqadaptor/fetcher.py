@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import datetime
 import logging
 from concurrent.futures.thread import ThreadPoolExecutor
 
-from omicron.core import FrameType, tf
-from omicron.core.errors import FetcherQuotaError
-from omicron.core.lang import async_concurrent, singleton
 import arrow
 import pytz
+from omicron.core.errors import FetcherQuotaError
+from omicron.core.lang import async_concurrent, singleton
+from omicron.core.timeframe import tf
+from omicron.core.types import FrameType
 
 try:
     import jqdatasdk as jq
@@ -79,7 +79,7 @@ class Fetcher:
             include_now = False
 
         try:
-            logger.info("fetching %s n_bars for %s end_at %s", n_bars, sec, end_at)
+            logger.info("fetching %s bars for %s end at %s", n_bars, sec, end_at)
             data = jq.get_bars(sec, n_bars, unit=frame_type.value, end_dt=end_at,
                                fq_ref_date=None, df=False,
                                fields=['date', 'open', 'high', 'low', 'close', 'volume',
@@ -87,6 +87,10 @@ class Fetcher:
                                include_now=include_now)
             data.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume',
                                 'amount', 'factor']
+            if len(data) == 0:
+                logger.warning("fetching %s(%s,%s) returns empty result", sec,
+                               n_bars, end_at)
+                return data
             if hasattr(data['frame'][0], 'astimezone'):  # not a date
                 data['frame'] = [frame.astimezone(self.tz) for frame in data['frame']]
             return data
@@ -94,6 +98,8 @@ class Fetcher:
             logger.exception(e)
             if str(e).find("最大查询限制") != -1:
                 raise FetcherQuotaError("Exceeded JQDataSDK Quota")
+            else:
+                raise e
 
     @async_concurrent(_executors)
     def get_security_list(self) -> np.ndarray:
@@ -106,13 +112,11 @@ class Fetcher:
         securities = jq.get_all_securities(types)
         securities.insert(0, 'code', securities.index)
 
-        def todate(s):
-            return datetime.date(*map(lambda x: int(x), s.split('-')))
-
         # remove client dependency of pandas
         securities['start_date'] = securities['start_date'].apply(
-            lambda start: todate(start))
-        securities['end_date'] = securities['end_date'].apply(lambda end: todate(end))
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
+        securities['end_date'] = securities['end_date'].apply(
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
         return securities.values
 
     @async_concurrent(_executors)

@@ -8,9 +8,9 @@ from .fetcher import Fetcher
 
 
 async def create_instance(**kwargs):
-    fetcher = Fetcher()
-    await fetcher.create_instance(**kwargs)
-    return fetcher
+    f = Fetcher()
+    await f.create_instance(**kwargs)
+    return f
 
 
 __all__ = ['create_instance']
