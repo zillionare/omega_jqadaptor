@@ -39,7 +39,7 @@ class Fetcher:
 
     @classmethod
     async def create_instance(cls, account: str, password: str, executors=None,
-                              max_workers=1, tz='Asia/Chongqing'):
+                              sessions=1, tz='Asia/Chongqing'):
         global _executors
 
         cls.tz = pytz.timezone(tz)
@@ -48,8 +48,8 @@ class Fetcher:
         logger.info("jqdata sdk login success")
 
         # noinspection PyProtectedMember
-        if executors is None or executors._max_workers > max_workers:
-            _executors = ThreadPoolExecutor(max_workers=min(1, max_workers))
+        if executors is None or executors._max_workers > sessions:
+            _executors = ThreadPoolExecutor(max_workers=min(1, sessions))
         else:
             _executors = executors
 
