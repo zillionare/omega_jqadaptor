@@ -31,15 +31,28 @@ class Fetcher:
     JQFetcher is a subclass of QuotesFetcher, but thanks for duck typing, we don't
     need file of QuotesFetcher here.
     """
-    tz = pytz.timezone('Asia/Chongqing')
+    tz = pytz.timezone('Asia/Shanghai')
 
     def __init__(self):
         pass
 
     @classmethod
-    async def create_instance(cls, account: str, password: str, tz='Asia/Chongqing'):
-        cls.tz = pytz.timezone(tz)
+    async def create_instance(cls, **kwargs):
+        """
+
+        Args:
+            account: str
+            password: str
+            tz: str
+
+        Returns:
+
+        """
+        cls.tz = pytz.timezone(kwargs.get('tz', 'Asia/Shanghai'))
         _instance = Fetcher()
+        account = str(kwargs.get("account"))
+        password = str(kwargs.get("password"))
+
         jq.auth(str(account), str(password))
         logger.info("jqdata sdk login success")
 
