@@ -23,7 +23,6 @@ from arrow import Arrow
 import numpy as np
 
 logger = logging.getLogger(__file__)
-_executors = None
 
 
 @singleton
@@ -38,25 +37,15 @@ class Fetcher:
         pass
 
     @classmethod
-    async def create_instance(cls, account: str, password: str, executors=None,
-                              sessions=1, tz='Asia/Chongqing'):
-        global _executors
-
+    async def create_instance(cls, account: str, password: str, tz='Asia/Chongqing'):
         cls.tz = pytz.timezone(tz)
         _instance = Fetcher()
-        jq.auth(account, password)
+        jq.auth(str(account), str(password))
         logger.info("jqdata sdk login success")
-
-        # noinspection PyProtectedMember
-        if executors is None or executors._max_workers > sessions:
-            _executors = ThreadPoolExecutor(max_workers=min(1, sessions))
-        else:
-            _executors = executors
 
         return _instance
 
-    @async_concurrent(_executors)
-    def get_bars(self, sec: str, end_at: Arrow, n_bars: int,
+    async def get_bars(self, sec: str, end_at: Arrow, n_bars: int,
                  frame_type: FrameType) -> np.array:
         """
         fetch quotes for security (code), and convert it to a dataframe
@@ -69,6 +58,8 @@ class Fetcher:
         :param frame_type:
         :return:
         """
+        logger.info("fetching %s bars for %s until %s", n_bars, sec, end_at)
+
         end_at = tf.shift(end_at, 1, frame_type)
         if isinstance(end_at, Arrow):
             end_at = end_at.datetime
@@ -79,7 +70,6 @@ class Fetcher:
             include_now = False
 
         try:
-            logger.info("fetching %s bars for %s end at %s", n_bars, sec, end_at)
             data = jq.get_bars(sec, n_bars, unit=frame_type.value, end_dt=end_at,
                                fq_ref_date=None, df=False,
                                fields=['date', 'open', 'high', 'low', 'close', 'volume',
@@ -101,8 +91,7 @@ class Fetcher:
             else:
                 raise e
 
-    @async_concurrent(_executors)
-    def get_security_list(self) -> np.ndarray:
+    async def get_security_list(self) -> np.ndarray:
         """
 
         Returns:
@@ -119,6 +108,5 @@ class Fetcher:
             lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
         return securities.values
 
-    @async_concurrent(_executors)
-    def get_all_trade_days(self) -> np.array:
+    async def get_all_trade_days(self) -> np.array:
         return jq.get_all_trade_days()
