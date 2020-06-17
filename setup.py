@@ -16,7 +16,7 @@ requirements = [
     'pyemit>=0.4.0',
     'numpy>=1.18.1',
     'jqdatasdk>=1.8',
-    'pytz==2019.3'
+    'pytz>=2019.3'
 ]
 
 setup_requirements = []

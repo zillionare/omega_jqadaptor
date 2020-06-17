@@ -71,8 +71,6 @@ class Fetcher:
         :param frame_type:
         :return:
         """
-        logger.info("fetching %s bars for %s until %s", n_bars, sec, end_at)
-
         end_at = tf.shift(end_at, 1, frame_type)
         if isinstance(end_at, Arrow):
             end_at = end_at.datetime
@@ -81,6 +79,9 @@ class Fetcher:
             include_now = True
         else:
             include_now = False
+
+        logger.info("fetching %s bars for %s until %s(include: %s)", n_bars, sec,
+                    end_at, include_now)
 
         try:
             data = jq.get_bars(sec, n_bars, unit=frame_type.value, end_dt=end_at,
