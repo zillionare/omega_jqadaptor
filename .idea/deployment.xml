@@ -9,6 +9,13 @@
           </mappings>
         </serverdata>
       </paths>
+      <paths name="aaron@localhost:22">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/mnt/c/workspace/omega_jqadator" local="$PROJECT_DIR$" />
+          </mappings>
+        </serverdata>
+      </paths>
     </serverData>
   </component>
 </project>
