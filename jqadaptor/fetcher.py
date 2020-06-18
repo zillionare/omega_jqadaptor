@@ -142,8 +142,10 @@ class Fetcher:
         while j >= 0 and i >=0:
             while data['frame'][i] > bars['frame'][j] and i >= 0:
                 i -= 1
-            assert data['frame'][i] == bars['frame'][j]
-            data[i] = bars[j]
+            if data['frame'][i] != bars['frame'][j]:
+                logger.warning("%s vs %s", data['frame'][i], bars['frame'][j])
+            else:
+                data[i] = bars[j]
             i -= 1
             j -= 1
 
