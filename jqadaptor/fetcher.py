@@ -62,7 +62,8 @@ class Fetcher:
     async def get_bars(self, sec: str,
                        end_at: Union[None, datetime.date, datetime.datetime],
                        n_bars: int,
-                       frame_type: FrameType) -> np.array:
+                       frame_type: FrameType,
+                       allow_unclosed=True) -> np.array:
         """
         fetch quotes for security (code), and convert it to a numpy array
         consists of:
@@ -93,7 +94,7 @@ class Fetcher:
                                fq_ref_date=None, df=False,
                                fields=['date', 'open', 'high', 'low', 'close', 'volume',
                                        'money', 'factor'],
-                               include_now=True)
+                               include_now=allow_unclosed)
             bars.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume',
                                 'amount', 'factor']
             if len(bars) == 0:
