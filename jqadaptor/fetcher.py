@@ -6,6 +6,7 @@ from typing import Union
 
 import arrow
 import pytz
+from dateutil import tz
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import singleton
 from omicron.core.timeframe import tf
@@ -20,7 +21,6 @@ except ModuleNotFoundError:
     import sys
 
     sys.exit(-1)
-from arrow import Arrow
 import numpy as np
 
 logger = logging.getLogger(__file__)
@@ -49,7 +49,7 @@ class Fetcher:
         Returns:
 
         """
-        cls.tz = pytz.timezone(kwargs.get('tz', 'Asia/Shanghai'))
+        cls.tz = tz.gettz(kwargs.get('tz', 'Asia/Shanghai'))
         _instance = Fetcher()
         account = str(kwargs.get("account"))
         password = str(kwargs.get("password"))
@@ -60,10 +60,10 @@ class Fetcher:
         return _instance
 
     async def get_bars(self, sec: str,
-                       end_at: Union[None, datetime.date, datetime.datetime],
+                       end_at: Union[datetime.date, datetime.datetime],
                        n_bars: int,
                        frame_type: FrameType,
-                       allow_unclosed=True) -> np.array:
+                       include_unclosed=True) -> np.array:
         """
         fetch quotes for security (code), and convert it to a numpy array
         consists of:
@@ -73,28 +73,25 @@ class Fetcher:
         :param end_at: the end_date of fetched quotes.
         :param n_bars: how many n_bars need to be fetched
         :param frame_type:
-        :param fetch_unclosed_frame: if True, then frame at end_at is included, even if
+        :param include_unclosed: if True, then frame at end_at is included, even if
         it's not closed. In such case, the frame time will not aligned.
         :return:
         """
         logger.info("fetching %s bars for %s until %s", n_bars, sec,
                     end_at)
 
-        if end_at is None:
-            end_at = tf.floor(arrow.now(tz=self.tz), frame_type)
+        if type(end_at) not in [datetime.date, datetime.datetime]:
+            raise TypeError("end_at must by type of datetime.date or datetime.datetime")
 
-        # 要获取某天的日线数据，必须传入日期和时间大于15:00
-        if isinstance(end_at, datetime.date) and not \
-                isinstance(end_at, datetime.datetime):
-            end_at = arrow.get(end_at).replace(hour=15, tzinfo=self.tz).datetime
-
+        if type(end_at) is datetime.date:
+            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
         try:
             bars = jq.get_bars(sec, n_bars, unit=frame_type.value,
                                end_dt=end_at,
                                fq_ref_date=None, df=False,
                                fields=['date', 'open', 'high', 'low', 'close', 'volume',
                                        'money', 'factor'],
-                               include_now=allow_unclosed)
+                               include_now=include_unclosed)
             bars.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume',
                                 'amount', 'factor']
             if len(bars) == 0:

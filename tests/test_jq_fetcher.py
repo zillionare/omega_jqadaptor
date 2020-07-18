@@ -8,7 +8,6 @@ import os
 import unittest
 
 import arrow
-import numpy
 from omicron.core.lang import async_run
 from omicron.core.types import FrameType
 
@@ -43,6 +42,20 @@ class TestJQ(unittest.TestCase):
         print(bars)
         self.assertEqual(bars[0]['frame'], arrow.get('2020-03-23').date())
         self.assertEqual(bars[-1]['frame'], arrow.get('2020-04-03').date())
+
+        end = arrow.get('2020-04-03').date()
+        frame_type = FrameType.DAY
+        bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
+        print(bars)
+        self.assertEqual(bars[0]['frame'], arrow.get('2020-4-1').date())
+        self.assertEqual(bars[-1]['frame'], end)
+
+        end = arrow.get('2020-04-03 10:30:00', tzinfo='Asia/Shanghai').datetime
+        frame_type = FrameType.MIN30
+        bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
+        print(bars)
+        self.assertEqual(bars[0]['frame'], arrow.get('2020-04-02 15:00:00', tzinfo='Asia/Shanghai').datetime)
+        self.assertEqual(bars[-1]['frame'], end)
 
     @async_run
     async def test_get_bars_not_in_trade(self):
@@ -93,8 +106,3 @@ class TestJQ(unittest.TestCase):
         self.assertAlmostEqual(5.47, bars['open'][0])
         self.assertAlmostEqual(5.26, bars['open'][-2])
         self.assertAlmostEqual(5.33, bars['open'][-1])
-
-
-
-
-
