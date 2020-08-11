@@ -4,7 +4,6 @@ import datetime
 import logging
 from typing import Union
 
-import arrow
 import pytz
 from dateutil import tz
 from omicron.core.errors import FetcherQuotaError
@@ -67,7 +66,7 @@ class Fetcher:
         """
         fetch quotes for security (code), and convert it to a numpy array
         consists of:
-        index   date    open    high    low    close  volume
+        index   date    open    high    low    close  volume money factor
 
         :param sec: security code in format "\\d{6}.{exchange server code}"
         :param end_at: the end_date of fetched quotes.
@@ -92,8 +91,17 @@ class Fetcher:
                                fields=['date', 'open', 'high', 'low', 'close', 'volume',
                                        'money', 'factor'],
                                include_now=include_unclosed)
-            bars.dtype.names = ['frame', 'open', 'high', 'low', 'close', 'volume',
-                                'amount', 'factor']
+            # convert to omega supported format
+            bars = np.array(bars, dtype=[
+                ('frame', 'O'),
+                ('open', 'f4'),
+                ('high', 'f4'),
+                ('low', 'f4'),
+                ('close', 'f4'),
+                ('volume', 'f8'),
+                ('amount', 'f8'),
+                ('factor', 'f4')
+            ])
             if len(bars) == 0:
                 logger.warning("fetching %s(%s,%s) returns empty result", sec,
                                n_bars, end_at)
