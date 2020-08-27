@@ -100,7 +100,7 @@ class Fetcher:
         it's not closed. In such case, the frame time will not aligned.
         :return:
         """
-        logger.info("fetching %s bars for %s until %s", n_bars, sec,
+        logger.debug("fetching %s bars for %s until %s", n_bars, sec,
                     end_at)
 
         if type(end_at) not in [datetime.date, datetime.datetime]:
