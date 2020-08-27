@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import datetime
 import logging
-from typing import Union
+from typing import Union, List
 
 import pytz
 from dateutil import tz
@@ -57,6 +57,30 @@ class Fetcher:
         logger.info("jqdata sdk login success")
 
         return _instance
+
+    async def get_bars_batch(self, secs: List[str], end_at: datetime.datetime,
+                             n_bars: int, frame_type: FrameType,
+                             include_unclosed=True) -> np.array:
+        resp = jq.get_bars(secs, n_bars, frame_type.value,
+                           fields=['date', 'open', 'high', 'low', 'close', 'volume',
+                                   'money', 'factor'], end_dt=end_at,
+                           include_now=include_unclosed, fq_ref_date=end_at, df=False)
+        results = {}
+        for code, bars in resp.items():
+            bars = np.array(bars, dtype=[
+                ('frame', 'O'),
+                ('open', 'f4'),
+                ('high', 'f4'),
+                ('low', 'f4'),
+                ('close', 'f4'),
+                ('volume', 'f8'),
+                ('amount', 'f8'),
+                ('factor', 'f4')
+            ])
+            results[code] = bars
+
+        return results
+
 
     async def get_bars(self, sec: str,
                        end_at: Union[datetime.date, datetime.datetime],
