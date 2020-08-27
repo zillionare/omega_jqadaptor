@@ -77,6 +77,10 @@ class Fetcher:
                 ('amount', 'f8'),
                 ('factor', 'f4')
             ])
+
+            if frame_type in tf.minute_level_frames:
+                bars['frame'] = [frame.astimezone(self.tz) for frame in bars['frame']]
+
             results[code] = bars
 
         return results
