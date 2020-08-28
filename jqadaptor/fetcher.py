@@ -61,6 +61,11 @@ class Fetcher:
     async def get_bars_batch(self, secs: List[str], end_at: datetime.datetime,
                              n_bars: int, frame_type: FrameType,
                              include_unclosed=True) -> np.array:
+        if type(end_at) not in [datetime.date, datetime.datetime]:
+            raise TypeError("end_at must by type of datetime.date or datetime.datetime")
+
+        if type(end_at) is datetime.date:
+            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
         resp = jq.get_bars(secs, n_bars, frame_type.value,
                            fields=['date', 'open', 'high', 'low', 'close', 'volume',
                                    'money', 'factor'], end_dt=end_at,
