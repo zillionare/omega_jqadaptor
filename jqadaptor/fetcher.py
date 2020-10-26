@@ -170,3 +170,14 @@ class Fetcher:
 
     async def get_all_trade_days(self) -> np.array:
         return jq.get_all_trade_days()
+
+    async def get_valuation(self, codes: Union[str, List[str]], day: datetime.date)->np.ndarray:
+        if isinstance(codes, str):
+            codes = [codes]
+
+        valuation = jq.get_fundamentals(jq.query(jq.valuation).filter(
+                                        # 这里不能使用 in 操作, 要使用in_()函数
+                                        jq.valuation.code.in_(codes)
+                                    ), date=str(day))
+        valuation.drop('id', inplace=True, axis=1)
+        return np.rec.fromrecords(valuation.values, names=valuation.columns.tolist())

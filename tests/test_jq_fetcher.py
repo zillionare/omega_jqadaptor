@@ -106,3 +106,15 @@ class TestJQ(unittest.TestCase):
         self.assertAlmostEqual(5.47, bars['open'][0])
         self.assertAlmostEqual(5.26, bars['open'][-2])
         self.assertAlmostEqual(5.33, bars['open'][-1])
+
+    @async_run
+    async def test_get_valuation(self):
+        sec = '000001.XSHE'
+        day = arrow.get('2020-10-20').date()
+        valuation = await self.fetcher.get_valuation(sec, day)
+        self.assertSetEqual(set(valuation['code'].tolist()), set([sec]))
+
+
+        sec = ['600000.XSHG', '000001.XSHE']
+        valuation = await self.fetcher.get_valuation(sec, day)
+        self.assertSetEqual(set(valuation['code'].tolist()), set(sec))
