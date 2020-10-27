@@ -23,6 +23,7 @@ class TestJQ(unittest.TestCase):
         try:
             account = os.environ['jq_account']
             password = os.environ['jq_password']
+            password = '87Ai2y3LzPOe'
             self.fetcher = await jqadaptor.create_instance(account=account,
                                                            password=password)
         except Exception as e:
@@ -118,3 +119,15 @@ class TestJQ(unittest.TestCase):
         sec = ['600000.XSHG', '000001.XSHE']
         valuation = await self.fetcher.get_valuation(sec, day)
         self.assertSetEqual(set(valuation['code'].tolist()), set(sec))
+
+    @async_run
+    async def test_get_bars_batch(self):
+        secs = ['000001.XSHE', '600000.XSHG']
+        end_at = arrow.get('2020-10-23').date()
+        n_bars = 5
+        frame_type = FrameType.DAY
+
+        bars = await self.fetcher.get_bars_batch(secs, end_at, n_bars, frame_type)
+
+        self.assertEqual(bars['000001.XSHE']['frame'][0], arrow.get('2020-10-19').date())
+        self.assertEqual(bars['600000.XSHG']['frame'][0], arrow.get('2020-10-19').date())
