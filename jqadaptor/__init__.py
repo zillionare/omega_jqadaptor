@@ -1,4 +1,4 @@
-"""Top-level package for SoloQuotes."""
+"""joinquant adaptor for zillionare"""
 
 __author__ = """Aaron Yang"""
 __email__ = 'code@jieyu.ai'
@@ -8,9 +8,13 @@ from .fetcher import Fetcher
 
 
 async def create_instance(**kwargs):
-    f = Fetcher()
-    await f.create_instance(**kwargs)
-    return f
+    """create fetcher instance and start session
+    Returns:
+        [QuotesFetcher]: the fetcher
+    """
+    fetcher = Fetcher()
+    await fetcher.create_instance(**kwargs)
+    return fetcher
 
 
 __all__ = ['create_instance']

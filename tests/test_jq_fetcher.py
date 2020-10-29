@@ -1,8 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-
-"""This is a awesome
-        python script!"""
 import logging
 import os
 import unittest
@@ -18,15 +15,20 @@ logging.basicConfig(level=logging.INFO)
 
 
 class TestJQ(unittest.TestCase):
+    fetcher: 'QuotesFetcher'  # type: ignore
+
+    # todo: it's bad idea to make setUp async and run it in async_run. Working this
+    # way, async task started in this loop may end in another loop started by test
     @async_run
-    async def setUp(self) -> None:
+    async def setUp(self) -> None:  # pylint: disable=invalid-overridden-method
         try:
             account = os.environ['jq_account']
             password = os.environ['jq_password']
-            password = '87Ai2y3LzPOe'
+
             self.fetcher = await jqadaptor.create_instance(account=account,
                                                            password=password)
-        except Exception as e:
+
+        except Exception as e:  # pylint: disable=broad-except
             logger.exception(e)
 
     @async_run
@@ -55,7 +57,9 @@ class TestJQ(unittest.TestCase):
         frame_type = FrameType.MIN30
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
         print(bars)
-        self.assertEqual(bars[0]['frame'], arrow.get('2020-04-02 15:00:00', tzinfo='Asia/Shanghai').datetime)
+        self.assertEqual(
+            bars[0]['frame'],
+            arrow.get('2020-04-02 15:00:00', tzinfo='Asia/Shanghai').datetime)
         self.assertEqual(bars[-1]['frame'], end)
 
     @async_run
@@ -115,7 +119,6 @@ class TestJQ(unittest.TestCase):
         valuation = await self.fetcher.get_valuation(sec, day)
         self.assertSetEqual(set(valuation['code'].tolist()), set([sec]))
 
-
         sec = ['600000.XSHG', '000001.XSHE']
         valuation = await self.fetcher.get_valuation(sec, day)
         self.assertSetEqual(set(valuation['code'].tolist()), set(sec))
@@ -129,5 +132,20 @@ class TestJQ(unittest.TestCase):
 
         bars = await self.fetcher.get_bars_batch(secs, end_at, n_bars, frame_type)
 
-        self.assertEqual(bars['000001.XSHE']['frame'][0], arrow.get('2020-10-19').date())
-        self.assertEqual(bars['600000.XSHG']['frame'][0], arrow.get('2020-10-19').date())
+        self.assertEqual(bars['000001.XSHE']['frame'][0],
+                         arrow.get('2020-10-19').date())
+        self.assertEqual(bars['600000.XSHG']['frame'][0],
+                         arrow.get('2020-10-19').date())
+
+    @async_run
+    async def test_get_turnover(self):
+        sec = '000001.XSHE'
+        day = arrow.get('2020-10-20').date()
+        turnover = await self.fetcher.get_turnover(sec, day)
+
+        self.assertEqual(len(turnover), 1)
+        self.assertAlmostEqual(turnover[0][1], 0.4947, places=2)
+
+        secs = ['600000.XSHG', '000001.XSHE']
+        turnover = await self.fetcher.get_turnover(secs, day)
+        self.assertAlmostEqual(turnover[1][1], 0.1591, places=2)
