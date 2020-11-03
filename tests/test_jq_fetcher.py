@@ -15,7 +15,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class TestJQ(unittest.TestCase):
-    fetcher: 'QuotesFetcher'  # type: ignore
+    fetcher: 'QuotesFetcher'  # noqa
 
     # todo: it's bad idea to make setUp async and run it in async_run. Working this
     # way, async task started in this loop may end in another loop started by test
@@ -28,7 +28,7 @@ class TestJQ(unittest.TestCase):
             self.fetcher = await jqadaptor.create_instance(account=account,
                                                            password=password)
 
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception as e:
             logger.exception(e)
 
     @async_run
@@ -69,13 +69,13 @@ class TestJQ(unittest.TestCase):
         bars = await self.fetcher.get_bars(sec, end, 7, FrameType.DAY)
         print(bars)
         self.assertEqual(arrow.get('2020-2-21').date(), bars['frame'][0])
-        self.assertAlmostEqual(1.25, bars[0]['open'])
+        self.assertAlmostEqual(1.25, bars[0]['open'], places=2)
 
         self.assertEqual(arrow.get('2020-02-26').date(), bars['frame'][3])
-        self.assertAlmostEqual(1.18, bars['open'][3])
+        self.assertAlmostEqual(1.18, bars['open'][3], places=2)
 
         self.assertEqual(arrow.get('2020-03-02').date(), bars['frame'][-1])
-        self.assertAlmostEqual(1.13, bars['open'][-1])
+        self.assertAlmostEqual(1.13, bars['open'][-1], places=2)
 
         # 600721, ST百花， 2020-4-29停牌一天
         sec = '600721.XSHG'
@@ -92,8 +92,8 @@ class TestJQ(unittest.TestCase):
                          bars['frame'][-2])
         self.assertEqual(arrow.get('2020-04-30 10:30', tzinfo='Asia/Shanghai'),
                          bars['frame'][-1])
-        self.assertAlmostEqual(5.47, bars['open'][0])
-        self.assertAlmostEqual(5.26, bars['open'][-1])
+        self.assertAlmostEqual(5.47, bars['open'][0], places=2)
+        self.assertAlmostEqual(5.26, bars['open'][-1], places=2)
 
         # 测试分钟级别未结束的frame能否获取
         end = arrow.get('2020-04-30 10:32', tzinfo='Asia/Shanghai').datetime
@@ -108,9 +108,9 @@ class TestJQ(unittest.TestCase):
         self.assertEqual(arrow.get('2020-04-30 10:30', tzinfo='Asia/Shanghai'),
                          bars['frame'][-2])
 
-        self.assertAlmostEqual(5.47, bars['open'][0])
-        self.assertAlmostEqual(5.26, bars['open'][-2])
-        self.assertAlmostEqual(5.33, bars['open'][-1])
+        self.assertAlmostEqual(5.47, bars['open'][0], places=2)
+        self.assertAlmostEqual(5.26, bars['open'][-2], places=2)
+        self.assertAlmostEqual(5.33, bars['open'][-1], places=2)
 
     @async_run
     async def test_get_valuation(self):
