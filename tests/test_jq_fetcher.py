@@ -5,7 +5,6 @@ import os
 import unittest
 
 import arrow
-from omicron.core.lang import async_run
 from omicron.core.types import FrameType
 
 import jqadaptor
@@ -14,13 +13,10 @@ logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
 
 
-class TestJQ(unittest.TestCase):
-    fetcher: 'QuotesFetcher'  # noqa
+class TestJQ(unittest.IsolatedAsyncioTestCase):
+    fetcher: 'QuotesFetcher'  # type: ignore # noqa
 
-    # todo: it's bad idea to make setUp async and run it in async_run. Working this
-    # way, async task started in this loop may end in another loop started by test
-    @async_run
-    async def setUp(self) -> None:  # pylint: disable=invalid-overridden-method
+    async def asyncSetUp(self) -> None:  # pylint: disable=invalid-overridden-method
         try:
             account = os.environ['jq_account']
             password = os.environ['jq_password']
@@ -31,12 +27,10 @@ class TestJQ(unittest.TestCase):
         except Exception as e:
             logger.exception(e)
 
-    @async_run
     async def test_get_security_list(self):
         sec_list = await self.fetcher.get_security_list()
         print(sec_list[:5])
 
-    @async_run
     async def test_get_bars(self):
         sec = '000001.XSHE'
         end = arrow.get('2020-04-04').date()
@@ -62,7 +56,6 @@ class TestJQ(unittest.TestCase):
             arrow.get('2020-04-02 15:00:00', tzinfo='Asia/Shanghai').datetime)
         self.assertEqual(bars[-1]['frame'], end)
 
-    @async_run
     async def test_get_bars_not_in_trade(self):
         sec = '600891.XSHG'
         end = arrow.get("2020-03-05").date()
@@ -112,7 +105,6 @@ class TestJQ(unittest.TestCase):
         self.assertAlmostEqual(5.26, bars['open'][-2], places=2)
         self.assertAlmostEqual(5.33, bars['open'][-1], places=2)
 
-    @async_run
     async def test_get_valuation(self):
         sec = '000001.XSHE'
         day = arrow.get('2020-10-20').date()
@@ -123,29 +115,24 @@ class TestJQ(unittest.TestCase):
         valuation = await self.fetcher.get_valuation(sec, day)
         self.assertSetEqual(set(valuation['code'].tolist()), set(sec))
 
-    @async_run
+    async def test_get_valuation_in_range(self):
+        sec = '000001.XSHE'
+        day = arrow.get('2020-11-2').date()
+
+        vals = await self.fetcher.get_valuation_in_range(sec, day, 3)
+        self.assertEqual(vals['date'][0], arrow.get('2020-10-29').date())
+        self.assertEqual(vals['date'][-1], day)
+
     async def test_get_bars_batch(self):
         secs = ['000001.XSHE', '600000.XSHG']
         end_at = arrow.get('2020-10-23').date()
         n_bars = 5
         frame_type = FrameType.DAY
 
-        bars = await self.fetcher.get_bars_batch(secs, end_at, n_bars, frame_type)
+        bars = await self.fetcher.get_bars_batch(secs, end_at, n_bars,
+                                                 frame_type)
 
         self.assertEqual(bars['000001.XSHE']['frame'][0],
                          arrow.get('2020-10-19').date())
         self.assertEqual(bars['600000.XSHG']['frame'][0],
                          arrow.get('2020-10-19').date())
-
-    @async_run
-    async def test_get_turnover(self):
-        sec = '000001.XSHE'
-        day = arrow.get('2020-10-20').date()
-        turnover = await self.fetcher.get_turnover(sec, day)
-
-        self.assertEqual(len(turnover), 1)
-        self.assertAlmostEqual(turnover[0][1], 0.4947, places=2)
-
-        secs = ['600000.XSHG', '000001.XSHE']
-        turnover = await self.fetcher.get_turnover(secs, day)
-        self.assertAlmostEqual(turnover[1][1], 0.1591, places=2)

@@ -73,12 +73,14 @@ class Fetcher:
         include_unclosed=True,
     ) -> np.array:
         if type(end_at) not in [datetime.date, datetime.datetime]:
-            raise TypeError("end_at must by type of datetime.date or datetime.datetime")
+            raise TypeError(
+                "end_at must by type of datetime.date or datetime.datetime")
 
         # has to use type rather than isinstance, since the latter always return true
         # when check if isinstance(datetime.datetime, datetime.date)
         if type(end_at) is datetime.date:  # pylint: disable=unidiomatic-typecheck
-            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
+            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day,
+                                       15)
         resp = jq.get_bars(
             secs,
             n_bars,
@@ -115,7 +117,9 @@ class Fetcher:
             )
 
             if frame_type in tf.minute_level_frames:
-                bars["frame"] = [frame.astimezone(self.tz) for frame in bars["frame"]]
+                bars["frame"] = [
+                    frame.astimezone(self.tz) for frame in bars["frame"]
+                ]
 
             results[code] = bars
 
@@ -145,10 +149,12 @@ class Fetcher:
         logger.debug("fetching %s bars for %s until %s", n_bars, sec, end_at)
 
         if type(end_at) not in [datetime.date, datetime.datetime]:
-            raise TypeError("end_at must by type of datetime.date or datetime.datetime")
+            raise TypeError(
+                "end_at must by type of datetime.date or datetime.datetime")
 
-        if type(end_at) is datetime.date: # noqa
-            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
+        if type(end_at) is datetime.date:  # noqa
+            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day,
+                                       15)
         try:
             bars = jq.get_bars(
                 sec,
@@ -184,13 +190,14 @@ class Fetcher:
                 ],
             )
             if len(bars) == 0:
-                logger.warning(
-                    "fetching %s(%s,%s) returns empty result", sec, n_bars, end_at
-                )
+                logger.warning("fetching %s(%s,%s) returns empty result", sec,
+                               n_bars, end_at)
                 return bars
 
             if frame_type in tf.minute_level_frames:
-                bars["frame"] = [frame.astimezone(self.tz) for frame in bars["frame"]]
+                bars["frame"] = [
+                    frame.astimezone(self.tz) for frame in bars["frame"]
+                ]
 
             return bars
         except Exception as e:  # pylint: disable=broad-except
@@ -212,32 +219,30 @@ class Fetcher:
 
         # remove client dependency of pandas
         securities["start_date"] = securities["start_date"].apply(
-            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}"
-        )
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
         securities["end_date"] = securities["end_date"].apply(
-            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}"
-        )
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
         return securities.values
 
     async def get_all_trade_days(self) -> np.array:
         return jq.get_all_trade_days()
 
-    async def get_valuation(
-        self, codes: Union[str, List[str]], day: datetime.date
-    ) -> np.ndarray:
+    async def get_valuation(self, codes: Union[str, List[str]],
+                            day: datetime.date) -> np.ndarray:
         if isinstance(codes, str):
             codes = [codes]
 
         df = jq.get_fundamentals(
             jq.query(jq.valuation).filter(
                 # 这里不能使用 in 操作, 要使用in_()函数
-                jq.valuation.code.in_(codes)
-            ),
+                jq.valuation.code.in_(codes)),
             date=str(day),
         )
 
+        return self._to_numpy(df)
+
+    def _to_numpy(self, df: pd.DataFrame) -> np.array:
         df["date"] = pd.to_datetime(df["day"]).dt.date
-        df.drop(["id", "day"], inplace=True, axis=1)
 
         # translate joinquant definition to zillionare definition
         fields = {
@@ -255,39 +260,34 @@ class Fetcher:
             "date": "date",
         }
 
-        dtypes = [
-            (fields[_name], _type) for _name, _type in zip(df.dtypes.index, df.dtypes)
-        ]
+        df = df[fields.keys()]
 
-        # this will return a np.recarray, which is slightly slow than structured array
+        dtypes = [(fields[_name], _type)
+                  for _name, _type in zip(df.dtypes.index, df.dtypes)]
+
+        # the following line will return a np.recarray, which is slightly slow than
+        # structured array, so it's commented out
         # return np.rec.fromrecords(valuation.values, names=valuation.columns.tolist())
         # to get a structued array
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_turnover(
-        self, codes: Union[str, List[str]], day: datetime.date
-    ) -> np.array:
-        """get turnover of security. Always returns a np.array of (n, 2) shape, here n
-        is len(codes), could be zero if no result returned
+    async def get_valuation_in_range(self, code: str, day: datetime.date,
+                                     n: int) -> np.array:
+        """get `n` of `code`'s valuation records, end at day.
 
         Args:
-            codes (Union[str, List[str]]): [description]
+            code (str): [description]
             day (datetime.date): [description]
+            n (int): [description]
 
         Returns:
             np.array: [description]
         """
-        if isinstance(codes, str):
-            codes = [codes]
+        q = jq.query(jq.valuation).filter(jq.valuation.code == code)
 
-        df = jq.get_fundamentals(
-            jq.query(jq.valuation.code, jq.valuation.turnover_ratio).filter(
-                jq.valuation.code.in_(codes)
-            ),
-            date=str(day),
-        )
+        df = jq.get_fundamentals_continuously(q,
+                                              count=n,
+                                              end_date=day,
+                                              panel=False)
 
-        dtypes = [("code", "O"), ("turnover", "f4")]
-        return np.array(
-            [tuple(x) for x in df[["code", "turnover_ratio"]].to_numpy()], dtype=dtypes
-        )
+        return self._to_numpy(df)
