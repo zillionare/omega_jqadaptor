@@ -227,20 +227,6 @@ class Fetcher:
     async def get_all_trade_days(self) -> np.array:
         return jq.get_all_trade_days()
 
-    async def get_valuation(self, codes: Union[str, List[str]],
-                            day: datetime.date) -> np.ndarray:
-        if isinstance(codes, str):
-            codes = [codes]
-
-        df = jq.get_fundamentals(
-            jq.query(jq.valuation).filter(
-                # 这里不能使用 in 操作, 要使用in_()函数
-                jq.valuation.code.in_(codes)),
-            date=str(day),
-        )
-
-        return self._to_numpy(df)
-
     def _to_numpy(self, df: pd.DataFrame) -> np.array:
         df["date"] = pd.to_datetime(df["day"]).dt.date
 
@@ -271,8 +257,10 @@ class Fetcher:
         # to get a structued array
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_valuation_in_range(self, code: str, day: datetime.date,
-                                     n: int) -> np.array:
+    async def get_valuation(self,
+                            codes: Union[str, List[str]],
+                            day: datetime.date,
+                            n: int = 1) -> np.array:
         """get `n` of `code`'s valuation records, end at day.
 
         Args:
@@ -283,11 +271,14 @@ class Fetcher:
         Returns:
             np.array: [description]
         """
-        q = jq.query(jq.valuation).filter(jq.valuation.code == code)
+        if isinstance(codes, str):
+            codes = [codes]
 
-        df = jq.get_fundamentals_continuously(q,
-                                              count=n,
-                                              end_date=day,
-                                              panel=False)
+        q = jq.query(jq.valuation).filter(jq.valuation.code.in_(codes))
 
-        return self._to_numpy(df)
+        records = jq.get_fundamentals_continuously(q,
+                                                   count=n,
+                                                   end_date=day,
+                                                   panel=False)
+
+        return self._to_numpy(records)

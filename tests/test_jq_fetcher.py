@@ -115,11 +115,8 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         valuation = await self.fetcher.get_valuation(sec, day)
         self.assertSetEqual(set(valuation['code'].tolist()), set(sec))
 
-    async def test_get_valuation_in_range(self):
-        sec = '000001.XSHE'
         day = arrow.get('2020-11-2').date()
-
-        vals = await self.fetcher.get_valuation_in_range(sec, day, 3)
+        vals = await self.fetcher.get_valuation(sec, day, 3)
         self.assertEqual(vals['date'][0], arrow.get('2020-10-29').date())
         self.assertEqual(vals['date'][-1], day)
 
