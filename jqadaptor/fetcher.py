@@ -43,11 +43,9 @@ class Fetcher:
         pass
 
     @classmethod
-    async def create_instance(cls,
-                              account: str,
-                              password: str,
-                              tz: str = "Asia/Shanghai",
-                              **kwargs):
+    async def create_instance(
+        cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
+    ):
         """
         创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
         Args:
@@ -75,14 +73,12 @@ class Fetcher:
         include_unclosed=True,
     ) -> np.array:
         if type(end_at) not in [datetime.date, datetime.datetime]:
-            raise TypeError(
-                "end_at must by type of datetime.date or datetime.datetime")
+            raise TypeError("end_at must by type of datetime.date or datetime.datetime")
 
         # has to use type rather than isinstance, since the latter always return true
         # when check if isinstance(datetime.datetime, datetime.date)
         if type(end_at) is datetime.date:  # pylint: disable=unidiomatic-typecheck
-            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day,
-                                       15)
+            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
         resp = jq.get_bars(
             secs,
             n_bars,
@@ -119,9 +115,7 @@ class Fetcher:
             )
 
             if frame_type in tf.minute_level_frames:
-                bars["frame"] = [
-                    frame.astimezone(self.tz) for frame in bars["frame"]
-                ]
+                bars["frame"] = [frame.astimezone(self.tz) for frame in bars["frame"]]
 
             results[code] = bars
 
@@ -151,12 +145,10 @@ class Fetcher:
         logger.debug("fetching %s bars for %s until %s", n_bars, sec, end_at)
 
         if type(end_at) not in [datetime.date, datetime.datetime]:
-            raise TypeError(
-                "end_at must by type of datetime.date or datetime.datetime")
+            raise TypeError("end_at must by type of datetime.date or datetime.datetime")
 
         if type(end_at) is datetime.date:  # noqa
-            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day,
-                                       15)
+            end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
         try:
             bars = jq.get_bars(
                 sec,
@@ -192,14 +184,13 @@ class Fetcher:
                 ],
             )
             if len(bars) == 0:
-                logger.warning("fetching %s(%s,%s) returns empty result", sec,
-                               n_bars, end_at)
+                logger.warning(
+                    "fetching %s(%s,%s) returns empty result", sec, n_bars, end_at
+                )
                 return bars
 
             if frame_type in tf.minute_level_frames:
-                bars["frame"] = [
-                    frame.astimezone(self.tz) for frame in bars["frame"]
-                ]
+                bars["frame"] = [frame.astimezone(self.tz) for frame in bars["frame"]]
 
             return bars
         except Exception as e:  # pylint: disable=broad-except
@@ -221,9 +212,11 @@ class Fetcher:
 
         # remove client dependency of pandas
         securities["start_date"] = securities["start_date"].apply(
-            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}"
+        )
         securities["end_date"] = securities["end_date"].apply(
-            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}")
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}"
+        )
         return securities.values
 
     async def get_all_trade_days(self) -> np.array:
@@ -245,13 +238,14 @@ class Fetcher:
             "circulating_cap": "circulating_cap",
             "circulating_market_cap": "circulating_market_cap",
             "pe_ratio_lyr": "pe_lyr",
-            "date": "date",
+            "date": "frame",
         }
 
         df = df[fields.keys()]
 
-        dtypes = [(fields[_name], _type)
-                  for _name, _type in zip(df.dtypes.index, df.dtypes)]
+        dtypes = [
+            (fields[_name], _type) for _name, _type in zip(df.dtypes.index, df.dtypes)
+        ]
 
         # the following line will return a np.recarray, which is slightly slow than
         # structured array, so it's commented out
@@ -259,10 +253,9 @@ class Fetcher:
         # to get a structued array
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_valuation(self,
-                            codes: Union[str, List[str]],
-                            day: datetime.date,
-                            n: int = 1) -> np.array:
+    async def get_valuation(
+        self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
+    ) -> np.array:
         """get `n` of `code`'s valuation records, end at day.
 
         对同一证券，返回的数据按升序排列（但取决于上游数据源）
@@ -279,9 +272,8 @@ class Fetcher:
 
         q = jq.query(jq.valuation).filter(jq.valuation.code.in_(codes))
 
-        records = jq.get_fundamentals_continuously(q,
-                                                   count=n,
-                                                   end_date=day,
-                                                   panel=False)
+        records = jq.get_fundamentals_continuously(
+            q, count=n, end_date=day, panel=False
+        )
 
         return self._to_numpy(records)
