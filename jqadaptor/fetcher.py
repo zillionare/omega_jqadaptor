@@ -11,7 +11,7 @@ from typing import List, Union
 
 import pandas as pd
 import pytz
-from dateutil import tz
+import dateutil
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import singleton
 from omicron.core.timeframe import tf
@@ -43,21 +43,23 @@ class Fetcher:
         pass
 
     @classmethod
-    async def create_instance(cls, **kwargs):
+    async def create_instance(cls,
+                              account: str,
+                              password: str,
+                              tz: str = "Asia/Shanghai",
+                              **kwargs):
         """
-
+        创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
         Args:
             account: str
             password: str
             tz: str
-
+            kwargs: not required
         Returns:
 
         """
-        cls.tz = tz.gettz(kwargs.get("tz", "Asia/Shanghai"))
+        cls.tz = dateutil.tz.gettz(tz)
         _instance = Fetcher()
-        account = str(kwargs.get("account"))
-        password = str(kwargs.get("password"))
 
         jq.auth(str(account), str(password))
         logger.info("jqdata sdk login success")
@@ -263,6 +265,7 @@ class Fetcher:
                             n: int = 1) -> np.array:
         """get `n` of `code`'s valuation records, end at day.
 
+        对同一证券，返回的数据按升序排列（但取决于上游数据源）
         Args:
             code (str): [description]
             day (datetime.date): [description]

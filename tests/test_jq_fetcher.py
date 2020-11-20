@@ -20,16 +20,19 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         try:
             account = os.environ['jq_account']
             password = os.environ['jq_password']
+            blablah = "blahblah"
 
             self.fetcher = await jqadaptor.create_instance(account=account,
-                                                           password=password)
+                                                           password=password,
+                                                           blablah=blablah)
 
         except Exception as e:
             logger.exception(e)
 
     async def test_get_security_list(self):
         sec_list = await self.fetcher.get_security_list()
-        print(sec_list[:5])
+        print(sec_list[0])
+        self.assertTrue(len(sec_list) > 0)
 
     async def test_get_bars(self):
         sec = '000001.XSHE'
