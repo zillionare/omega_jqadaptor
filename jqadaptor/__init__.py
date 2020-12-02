@@ -2,7 +2,7 @@
 
 __author__ = """Aaron Yang"""
 __email__ = "code@jieyu.ai"
-__version__ = '0.2.5'
+__version__ = '0.2.6'
 
 from .fetcher import Fetcher
 
