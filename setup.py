@@ -10,8 +10,14 @@ with open('HISTORY.rst') as history_file:
     history = history_file.read()
 
 requirements = [
-    'arrow~=0.15', 'ruamel.yaml~=0.16', 'numpy==1.19.4', 'jqdatasdk>=1.8',
-    'pytz>=2019.3'
+    'arrow~=0.15', 
+    'ruamel.yaml~=0.16', 
+    'numpy==1.19.4', 
+    'jqdatasdk>=1.8',
+    'pytz>=2019.3', 
+    'zillionare-omicron>=0.1',
+    'cfg4py>=0.8.0',
+    'ruamel.yaml>=0.16'
 ]
 
 setup_requirements = []
@@ -38,8 +44,6 @@ setup(
     name='zillionare-omega-adaptors-jq',
     packages=find_packages(include=['jqadaptor', 'jqadaptor.*']),
     setup_requires=setup_requirements,
-    test_suite='tests',
-    tests_require=test_requirements,
     url='https://github.com/zillionare/omega_jqadaptor',
     version='0.2.5',
     zip_safe=False,
