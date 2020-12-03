@@ -6,9 +6,10 @@ import unittest
 from unittest import mock
 
 import arrow
-import jqadaptor
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.types import FrameType
+
+import jqadaptor
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +56,13 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         frame_type = FrameType.MIN30
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
         print(bars)
+        if (
+            bars[0]["frame"]
+            != arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime
+        ):
+            print(bars[0]["frame"])
+            print(arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime)
+
         self.assertEqual(
             bars[0]["frame"],
             arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime,
