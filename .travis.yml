@@ -1,29 +1,18 @@
-# Config file for automatic testing at travis-ci.com
-
 language: python
 python:
-  - 3.8
-
-# Command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
+- 3.8
 install: pip install -U tox-travis
-
 before_script:
- - export TZ=Asia/Shanghai
-# Command to run tests, e.g. python setup.py test
+- export TZ=Asia/Shanghai
 script: tox
-
-# Assuming you have installed the travis-ci CLI tool, after you
-# create the Github repo and add it to Travis, run the
-# following command to finish PyPI deployment setup:
-# $ travis encrypt --add deploy.password
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
   skip_existing: true
   skip_cleanup: true
-  user: __token__
+  user: Aaron-Yang
   password:
-    secure: ZSUoe4S4nC+e+ePLmxrruPXXngNf9EDlAxy4zbwciq2GvFbi5kscldmjYy9jPMHfwVkObW8qXL7oKD0RpMNl+5uG/yDHFXvVOcPTi6FLjiGM+PEtJU51dOTWwodsQGa0i182DmgesuzDd5HkRjLeopiTITDBSYNhw1jTqe0P2o2ac9ikSDniWkKuwS5XLiMaOH4iwfA2IBo8l48WCFjsd60bO5oRUYHk6gMvICZdejZ2QerluhS3n9CXZm7UogHaSx7tvvifAIbmFpPIadlxhEj9kq2SSB1jS1ELLYKSBV2nSRoTkFCOGHmBZBwJXy8wuLe5V2f523Z7x5VOOJwUtu7gC2k8OLvsF/AELKXqGocJr0oyowbD5xg64cTq9bj8zDWFA9AeSWm9fouPXhvM0Q2BLxXK68AclTmpOwAmlfLmRXQ8KxptlI78nAsoc0SpeQ//a8IBT9K+xW6n/ZQyPRz0v0pYLYsWNK3XnJvvvA1H9eZOdmUrBdakJiOBFi3KLPSt4wTyeoQOabG5uEIj/uavApC/te9gLkRAuZLRhDk7sc9wqOH0mq3NE925reSyQJIAnuD3c9af7fDWvnrQ1H6NuXqek4iqBV7/e2sFMj3VMuou9bReBvd1rKefcJFtYtrFFDbDkWnExdCVy+uXzK9jz5Xut5niJhNqduSRmE4=
-  on:
+    secure: gfMXyeUoLtjZdzmwlxCPFm4MKLgVf3TUfW4AtzmoAiYPjI9my+udOPiZpFsKD/bxiisQwjiFE+Iz8dPB6BOXjvapdaZCqzRun1XvxIkRwUs5bnaqY7WGbAdlAbpBIBMUOOH9MyevXna+TU3I19MqFjma3vipeXbzZEw2E7vrBBGKd9hX5dTLzpugdtuvWZXHOUzZiGVLz5kLWEkbOLooqAbxvD+4X1nuDNIdsFt4CXI6dGSKcDTee3UqH7p7pipYqT5rVdVI7G/P27LbMbesXdf9KL+tMFcSBfxKqKDoKWfvk23x7qp6kUFCEQkmOW+UV5hQNmqFSccPXVU0sKlRTB0ZGOywY1XFsIhjTuvP19Ybli/1bkvtQV6ExYbABypCTFJ5B/L3/2dAiXOU2ghmu2XrxYsYQVH9CdIoCZ+R5Tzf3yrciYxjtpCG8L0+od8F7WdbERNxGt2ASieSPc6JLB+Nqm4Xam8vSA//AgS81oMAwILI11KAJ61DAWjvDseYoWTzsGAciFrKrH6kn3LsL532KmkQn67MTBqQWSH4/MYBqV1Zrvv8yEBRp99T7u0dRmLIIL34To6qgtAehDKuZ84Dg4cQoeu76Vv8ldlJJL6r75sdHVIPnnda1VVmqmX62kAepzEMeUzg4z/HhS1PIxr+B2JdbtlprZogQDWvPuo=
+  true:
     tags: true
     python: 3.8
