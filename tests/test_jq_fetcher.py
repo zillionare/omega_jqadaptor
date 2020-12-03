@@ -3,11 +3,12 @@
 import logging
 import os
 import unittest
+from unittest import mock
 
 import arrow
-from omicron.core.types import FrameType
-
 import jqadaptor
+from omicron.core.errors import FetcherQuotaError
+from omicron.core.types import FrameType
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -60,6 +61,22 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         )
         self.assertEqual(bars[-1]["frame"], end)
 
+    async def test_get_bars_with_exceptions(self):
+        sec = "000001.XSHE"
+        end = arrow.get("2020-04-04").date()
+        frame_type = FrameType.DAY
+
+        with mock.patch("jqdatasdk.get_bars", side_effect=[[]]):
+            bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
+            self.assertEqual(0, len(bars))
+
+        with mock.patch("jqdatasdk.get_bars", side_effect=Exception("最大查询限制")):
+            try:
+                bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
+                self.assertTrue(False, "Expected FetcherQuotaError, got None")
+            except FetcherQuotaError:
+                self.assertTrue(True, "FetcherQuotaError throwed as expected")
+
     async def test_get_bars_not_in_trade(self):
         sec = "600891.XSHG"
         end = arrow.get("2020-03-05").date()
@@ -83,7 +100,8 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         print(bars)
         self.assertEqual(6, len(bars))
         self.assertEqual(
-            arrow.get("2020-04-27 15:00", tzinfo="Asia/Shanghai"), bars["frame"][0]
+            arrow.get("2020-04-27 15:00", tzinfo="Asia/Shanghai").datetime,
+            bars["frame"][0],
         )
         # 检查是否停牌日被跳过
         self.assertEqual(

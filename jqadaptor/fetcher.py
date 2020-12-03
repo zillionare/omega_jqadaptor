@@ -9,24 +9,15 @@ import datetime
 import logging
 from typing import List, Union
 
+import dateutil
+import jqdatasdk as jq
+import numpy as np
 import pandas as pd
 import pytz
-import dateutil
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import singleton
 from omicron.core.timeframe import tf
 from omicron.core.types import FrameType
-
-try:
-    import jqdatasdk as jq
-except ModuleNotFoundError:
-    import warnings
-
-    warnings.warn("请安装jqdatasdk 1.8以上版本。程序即将退出。")
-    import sys
-
-    sys.exit(-1)
-import numpy as np
 
 logger = logging.getLogger(__file__)
 
