@@ -9,6 +9,9 @@ Sphinx==1.8.5
 twine==1.14.0
 recommonmark>=0.6.0
 apscheduler==3.6.3
+black==20.8b1
+pre-commit==2.8.2
+isort==5.6.4
 
 # refer to setup.py
 .
