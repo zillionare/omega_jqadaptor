@@ -7,12 +7,12 @@ before_script:
 script: tox
 deploy:
   provider: pypi
+  server: https://testpypi.python.org/pypi
   distributions: sdist bdist_wheel
   skip_existing: true
   skip_cleanup: true
-  user: zillionare
-  password:
-    secure: gfMXyeUoLtjZdzmwlxCPFm4MKLgVf3TUfW4AtzmoAiYPjI9my+udOPiZpFsKD/bxiisQwjiFE+Iz8dPB6BOXjvapdaZCqzRun1XvxIkRwUs5bnaqY7WGbAdlAbpBIBMUOOH9MyevXna+TU3I19MqFjma3vipeXbzZEw2E7vrBBGKd9hX5dTLzpugdtuvWZXHOUzZiGVLz5kLWEkbOLooqAbxvD+4X1nuDNIdsFt4CXI6dGSKcDTee3UqH7p7pipYqT5rVdVI7G/P27LbMbesXdf9KL+tMFcSBfxKqKDoKWfvk23x7qp6kUFCEQkmOW+UV5hQNmqFSccPXVU0sKlRTB0ZGOywY1XFsIhjTuvP19Ybli/1bkvtQV6ExYbABypCTFJ5B/L3/2dAiXOU2ghmu2XrxYsYQVH9CdIoCZ+R5Tzf3yrciYxjtpCG8L0+od8F7WdbERNxGt2ASieSPc6JLB+Nqm4Xam8vSA//AgS81oMAwILI11KAJ61DAWjvDseYoWTzsGAciFrKrH6kn3LsL532KmkQn67MTBqQWSH4/MYBqV1Zrvv8yEBRp99T7u0dRmLIIL34To6qgtAehDKuZ84Dg4cQoeu76Vv8ldlJJL6r75sdHVIPnnda1VVmqmX62kAepzEMeUzg4z/HhS1PIxr+B2JdbtlprZogQDWvPuo=
+  user: __token__
+  password: pypi-AgENdGVzdC5weXBpLm9yZwIkNGMzZTE1YzUtMzdjYy00MzQ5LWI3YzItMWRjNTQ4MjVjNmNhAAIleyJwZXJtaXNzaW9ucyI6ICJ1c2VyIiwgInZlcnNpb24iOiAxfQAABiCpBVQmmCAyKGxBDSZqKBJ6CQjkddMvzRUI1rWGKZDP-A
   true:
     tags: true
     python: 3.8
