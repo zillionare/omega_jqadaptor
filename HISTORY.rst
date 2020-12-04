@@ -7,11 +7,11 @@ History
 
 * First release on PyPI.
 
-0.3.0 (2020-12-03)
+0.3.2 (2020-12-04)
 -------------------
-* Alpha release
+* Alpha release of 0.3
 * Features:
-    1. get_bars
+    1. get_bar
     2. get_security_list
     3. get_all_trade_days
     4. get_bars_batch
