@@ -11,8 +11,9 @@ deploy:
   distributions: sdist bdist_wheel
   skip_existing: true
   skip_cleanup: true
-  user: __token__
-  password: pypi-AgENdGVzdC5weXBpLm9yZwIkNGMzZTE1YzUtMzdjYy00MzQ5LWI3YzItMWRjNTQ4MjVjNmNhAAIleyJwZXJtaXNzaW9ucyI6ICJ1c2VyIiwgInZlcnNpb24iOiAxfQAABiCpBVQmmCAyKGxBDSZqKBJ6CQjkddMvzRUI1rWGKZDP-A
+  user: Aaron-Yang
+  password:
+    secure:  CU8apTyrW8G0xfq7BH89tEVA5JLHoc2T1Ak7XNiQBjq6TCFB3gQ06cps1+sMVAzGLA53sMt8Wp3PGU2oUbKFgtbtkHf2ziHVXm8PaDPWGxIq2iPgTKBTw04IsRd+LTyq3INk9wdZK8OawqQSZI+ndiZ3r5ojMgvnxjMZSYsut/ZzP4SjBAELZMjyjQp++qXLlBo+dSN0rH5tzBWHeoTkHGXnoJnxd9ON6H7vcfOzmgQPtAJfQyjpR6UisT6av+mvIqOuewI+AxqzfjhUs5MDCuze8TEyCRVZBSP+yt+sox7fuCD+3JEckZb2sIrGSiFxG8SYjHi7oEYnIA6eSzzHKJN6dYLtLeH9fUxerikL7RvEtBvYVJVq3FMHpkObednVV05Cb7+SJC9U5sg/3M+yCTpb4FHTi01SxDkD+5dqJU2GEf36+1Tt6z+gLgyCCE4w1wX+4qVbDHu2ecfgLzZKyNN5EJbFFIBW9+IuuYRqFbcdVxDOP2WrKBWWi5SmBbd5t93bPzJ/BnKR9J/G5wE4XLlvWL/6g4/KySUr72kaywkLJb7moRdciOPtKbPTR8qcLeiO4NJ6bJN2wLcfjM8raJ7bH34QWGtFz9gJ7uZN0jKSnHEz0EZFoq6Jh8Triq7KD8Bhi4mQeTcpupqJbUWl2lzPx5YmagV/aNfO0M55F30=
   true:
     tags: true
     python: 3.8
