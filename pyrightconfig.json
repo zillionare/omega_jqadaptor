@@ -14,5 +14,5 @@
   ],
 
   "reportMissingImports": true,
-  "reportMissingTypeStubs": false,
+  "reportMissingTypeStubs": false
 }
