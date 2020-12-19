@@ -10,10 +10,11 @@ import logging
 from typing import List, Union
 
 import dateutil
-import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
+
+import jqdatasdk as jq
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import singleton
 from omicron.core.timeframe import tf
@@ -261,7 +262,10 @@ class Fetcher:
         if isinstance(codes, str):
             codes = [codes]
 
-        q = jq.query(jq.valuation).filter(jq.valuation.code.in_(codes))
+        if codes is None:
+            q = jq.query(jq.valuation)
+        else:
+            q = jq.query(jq.valuation).filter(jq.valuation.code.in_(codes))
 
         records = jq.get_fundamentals_continuously(
             q, count=n, end_date=day, panel=False

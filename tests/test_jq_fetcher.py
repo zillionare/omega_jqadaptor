@@ -6,10 +6,9 @@ import unittest
 from unittest import mock
 
 import arrow
+import jqadaptor
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.types import FrameType
-
-import jqadaptor
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -155,6 +154,9 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         vals = await self.fetcher.get_valuation(sec, day, 3)
         self.assertEqual(vals["frame"][0], arrow.get("2020-10-29").date())
         self.assertEqual(vals["frame"][-1], day)
+
+        vals = await self.fetcher.get_valuation(None, day, 1)
+        self.assertTrue(len(vals) > 1000)
 
     async def test_get_bars_batch(self):
         secs = ["000001.XSHE", "600000.XSHG"]

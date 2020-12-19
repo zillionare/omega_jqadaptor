@@ -26,7 +26,7 @@ Jqdatasdk adapter for zillionare omega
 Features
 --------
 
-* TODO
+* fetch quotation data from joinquant and convert to zillionare compatible format.
 
 Credits
 -------
