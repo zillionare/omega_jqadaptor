@@ -10,11 +10,10 @@ import logging
 from typing import List, Union
 
 import dateutil
+import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
-
-import jqdatasdk as jq
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.lang import singleton
 from omicron.core.timeframe import tf

@@ -6,9 +6,10 @@ import unittest
 from unittest import mock
 
 import arrow
-import jqadaptor
 from omicron.core.errors import FetcherQuotaError
 from omicron.core.types import FrameType
+
+import jqadaptor
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -19,8 +20,8 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
 
     async def asyncSetUp(self) -> None:  # pylint: disable=invalid-overridden-method
         try:
-            account = os.environ["jq_account"]
-            password = os.environ["jq_password"]
+            account = os.environ["JQ_ACCOUNT"]
+            password = os.environ["JQ_PASSWORD"]
             blablah = "blahblah"
 
             self.fetcher = await jqadaptor.create_instance(
