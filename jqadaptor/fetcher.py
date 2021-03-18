@@ -50,8 +50,18 @@ class Fetcher:
         cls.tz = dateutil.tz.gettz(tz)
         _instance = Fetcher()
 
-        jq.auth(str(account), str(password))
-        logger.info("jqdata sdk login success")
+        account = str(account)
+        password = str(password)
+        logger.info(
+            "login jqdatasdk with account %s",
+            account[: min(4, len(account))].ljust(7, "*"),
+        )
+        try:
+            jq.auth(account, password)
+            logger.info("jqdata sdk login success")
+        except Exception as e:
+            logger.exception(e)
+            logger.warning("failed to login jqdatasdk")
 
         return _instance
 

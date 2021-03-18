@@ -41,21 +41,18 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         end = arrow.get("2020-04-04").date()
         frame_type = FrameType.DAY
         bars = await self.fetcher.get_bars(sec, end, 10, frame_type)
-        print(bars)
         self.assertEqual(bars[0]["frame"], arrow.get("2020-03-23").date())
         self.assertEqual(bars[-1]["frame"], arrow.get("2020-04-03").date())
 
         end = arrow.get("2020-04-03").date()
         frame_type = FrameType.DAY
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
-        print(bars)
         self.assertEqual(bars[0]["frame"], arrow.get("2020-4-1").date())
         self.assertEqual(bars[-1]["frame"], end)
 
         end = arrow.get("2020-04-03 10:30:00", tzinfo="Asia/Shanghai").datetime
         frame_type = FrameType.MIN30
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
-        print(bars)
         if (
             bars[0]["frame"]
             != arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime
@@ -68,6 +65,20 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime,
         )
         self.assertEqual(bars[-1]["frame"], end)
+
+        # 测试include_unclosed为False的情况
+        import datetime
+
+        end = datetime.date(2021, 2, 8)
+        bars = await self.fetcher.get_bars(sec, end, 1, FrameType.WEEK, False)
+        self.assertEqual(datetime.date(2021, 2, 5), bars["frame"][0])
+
+        # 测试include_unclosed为True的情况
+        sec = "000001.XSHE"
+        end = datetime.date(2021, 2, 8)
+        frame_type = FrameType.WEEK
+        bars = await self.fetcher.get_bars(sec, end, 1, frame_type, True)
+        self.assertEqual(datetime.date(2021, 2, 8), bars["frame"][0])
 
     async def test_get_bars_with_exceptions(self):
         sec = "000001.XSHE"
