@@ -16,3 +16,11 @@ History
     3. get_all_trade_days
     4. get_bars_batch
     5. get_valuation
+
+1.0.0 (2021-3-29)
+-------------------
+bug fix:
+    1. lock down jqdatasdk, sqlalchemy's version. Recently sqlalchemy's update (to 1.4)
+    cause several incompatible issue.
+    2. remove dependancy of omicron
+    3. fix timezone issue of get_bars/get_bars_batch, see #2
