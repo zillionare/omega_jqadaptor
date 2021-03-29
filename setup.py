@@ -13,9 +13,9 @@ requirements = [
     "arrow>=0.15",
     "ruamel.yaml>=0.16",
     "numpy>=1.8",
-    "jqdatasdk>=1.8",
+    "jqdatasdk==1.8.9",
+    "SQLAlchemy>=1.3.23,<1.4",
     "pytz>=2019.3",
-    "zillionare-omicron>=0.1",
     "cfg4py>=0.8",
 ]
 
