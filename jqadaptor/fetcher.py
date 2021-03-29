@@ -16,10 +16,10 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from jqadaptor.timeframe import tf
-from jqadaptor.types import FrameType
-
 logger = logging.getLogger(__file__)
+
+
+minute_level_frames = ["60m", "30m", "15m", "5m", "1m"]
 
 
 class FetcherQuotaError(BaseException):
@@ -97,7 +97,7 @@ class Fetcher:
         secs: List[str],
         end_at: datetime.datetime,
         n_bars: int,
-        frame_type: FrameType,
+        frame_type: str,
         include_unclosed=True,
     ) -> np.array:
         if type(end_at) not in [datetime.date, datetime.datetime]:
@@ -110,7 +110,7 @@ class Fetcher:
         resp = jq.get_bars(
             secs,
             n_bars,
-            frame_type.value,
+            frame_type,
             fields=[
                 "date",
                 "open",
@@ -142,7 +142,7 @@ class Fetcher:
                 ],
             )
 
-            if frame_type in tf.minute_level_frames:
+            if frame_type in minute_level_frames:
                 bars["frame"] = [
                     frame.replace(tzinfo=self.tz) for frame in bars["frame"]
                 ]
@@ -156,7 +156,7 @@ class Fetcher:
         sec: str,
         end_at: Union[datetime.date, datetime.datetime],
         n_bars: int,
-        frame_type: FrameType,
+        frame_type: str,
         include_unclosed=True,
     ) -> np.array:
         """
@@ -183,7 +183,7 @@ class Fetcher:
             bars = jq.get_bars(
                 sec,
                 n_bars,
-                unit=frame_type.value,
+                unit=frame_type,
                 end_dt=end_at,
                 fq_ref_date=None,
                 df=False,
@@ -219,7 +219,7 @@ class Fetcher:
                 )
                 return bars
 
-            if frame_type in tf.minute_level_frames:
+            if frame_type in minute_level_frames:
                 bars["frame"] = [
                     frame.replace(tzinfo=self.tz) for frame in bars["frame"]
                 ]

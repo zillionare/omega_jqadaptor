@@ -9,7 +9,6 @@ import arrow
 
 import jqadaptor
 from jqadaptor.fetcher import FetcherQuotaError
-from jqadaptor.types import FrameType
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -39,19 +38,19 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
     async def test_get_bars(self):
         sec = "000001.XSHE"
         end = arrow.get("2020-04-04").date()
-        frame_type = FrameType.DAY
+        frame_type = "1d"
         bars = await self.fetcher.get_bars(sec, end, 10, frame_type)
         self.assertEqual(bars[0]["frame"], arrow.get("2020-03-23").date())
         self.assertEqual(bars[-1]["frame"], arrow.get("2020-04-03").date())
 
         end = arrow.get("2020-04-03").date()
-        frame_type = FrameType.DAY
+        frame_type = "1d"
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
         self.assertEqual(bars[0]["frame"], arrow.get("2020-4-1").date())
         self.assertEqual(bars[-1]["frame"], end)
 
         end = arrow.get("2020-04-03 10:30:00", tzinfo="Asia/Shanghai").datetime
-        frame_type = FrameType.MIN30
+        frame_type = "30m"
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
         if (
             bars[0]["frame"]
@@ -70,20 +69,20 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         import datetime
 
         end = datetime.date(2021, 2, 8)
-        bars = await self.fetcher.get_bars(sec, end, 1, FrameType.WEEK, False)
+        bars = await self.fetcher.get_bars(sec, end, 1, "1w", False)
         self.assertEqual(datetime.date(2021, 2, 5), bars["frame"][0])
 
         # 测试include_unclosed为True的情况
         sec = "000001.XSHE"
         end = datetime.date(2021, 2, 8)
-        frame_type = FrameType.WEEK
+        frame_type = "1w"
         bars = await self.fetcher.get_bars(sec, end, 1, frame_type, True)
         self.assertEqual(datetime.date(2021, 2, 8), bars["frame"][0])
 
     async def test_get_bars_with_exceptions(self):
         sec = "000001.XSHE"
         end = arrow.get("2020-04-04").date()
-        frame_type = FrameType.DAY
+        frame_type = "1d"
 
         with mock.patch("jqdatasdk.get_bars", side_effect=[[]]):
             bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
@@ -99,7 +98,7 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
     async def test_get_bars_not_in_trade(self):
         sec = "600891.XSHG"
         end = arrow.get("2020-03-05").date()
-        bars = await self.fetcher.get_bars(sec, end, 7, FrameType.DAY)
+        bars = await self.fetcher.get_bars(sec, end, 7, "1d")
         print(bars)
         self.assertEqual(arrow.get("2020-2-21").date(), bars["frame"][0])
         self.assertAlmostEqual(1.25, bars[0]["open"], places=2)
@@ -113,7 +112,7 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         # 600721, ST百花， 2020-4-29停牌一天
         sec = "600721.XSHG"
         end = arrow.get("2020-04-30 10:30", tzinfo="Asia/Chongqing").datetime
-        frame_type = FrameType.MIN60
+        frame_type = "60m"
 
         bars = await self.fetcher.get_bars(sec, end, 6, frame_type)
         print(bars)
@@ -134,7 +133,7 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
 
         # 测试分钟级别未结束的frame能否获取
         end = arrow.get("2020-04-30 10:32", tzinfo="Asia/Shanghai").datetime
-        bars = await self.fetcher.get_bars(sec, end, 7, FrameType.MIN60)
+        bars = await self.fetcher.get_bars(sec, end, 7, "60m")
         print(bars)
 
         self.assertEqual(7, len(bars))
@@ -174,7 +173,7 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         secs = ["000001.XSHE", "600000.XSHG"]
         end_at = arrow.get("2020-10-23").date()
         n_bars = 5
-        frame_type = FrameType.DAY
+        frame_type = "1d"
 
         bars = await self.fetcher.get_bars_batch(secs, end_at, n_bars, frame_type)
 
