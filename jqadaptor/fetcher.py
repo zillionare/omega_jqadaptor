@@ -6,6 +6,7 @@ __version__ = "0.1.1"
 
 # -*- coding: utf-8 -*-
 import datetime
+import functools
 import logging
 from typing import List, Union
 
@@ -14,12 +15,38 @@ import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
-from omicron.core.errors import FetcherQuotaError
-from omicron.core.lang import singleton
-from omicron.core.timeframe import tf
-from omicron.core.types import FrameType
+
+from jqadaptor.timeframe import tf
+from jqadaptor.types import FrameType
 
 logger = logging.getLogger(__file__)
+
+
+class FetcherQuotaError(BaseException):
+    """quotes fetcher quota exceed"""
+
+    pass
+
+
+def singleton(cls):
+    """Make a class a Singleton class
+
+    Examples:
+        >>> @singleton
+        ... class Foo:
+        ...     # this is a singleton class
+        ...     pass
+
+    """
+    instances = {}
+
+    @functools.wraps(cls)
+    def get_instance(*args, **kwargs):
+        if cls not in instances:
+            instances[cls] = cls(*args, **kwargs)
+        return instances[cls]
+
+    return get_instance
 
 
 @singleton
@@ -116,7 +143,9 @@ class Fetcher:
             )
 
             if frame_type in tf.minute_level_frames:
-                bars["frame"] = [frame.astimezone(self.tz) for frame in bars["frame"]]
+                bars["frame"] = [
+                    frame.replace(tzinfo=self.tz) for frame in bars["frame"]
+                ]
 
             results[code] = bars
 
@@ -191,7 +220,9 @@ class Fetcher:
                 return bars
 
             if frame_type in tf.minute_level_frames:
-                bars["frame"] = [frame.astimezone(self.tz) for frame in bars["frame"]]
+                bars["frame"] = [
+                    frame.replace(tzinfo=self.tz) for frame in bars["frame"]
+                ]
 
             return bars
         except Exception as e:  # pylint: disable=broad-except

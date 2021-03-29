@@ -6,10 +6,10 @@ import unittest
 from unittest import mock
 
 import arrow
-from omicron.core.errors import FetcherQuotaError
-from omicron.core.types import FrameType
 
 import jqadaptor
+from jqadaptor.fetcher import FetcherQuotaError
+from jqadaptor.types import FrameType
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
