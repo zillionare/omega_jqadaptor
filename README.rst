@@ -3,8 +3,8 @@ jqadatpor
 ===========
 
 
-.. image:: https://img.shields.io/pypi/v/jqadatpor.svg
-        :target: https://pypi.python.org/pypi/jqadatpor
+.. image:: https://img.shields.io/pypi/v/zillionare-omega-adaptors-jq.svg
+        :target: https://pypi.org/project/zillionare-omega-adaptors-jq/
 
 .. image:: https://img.shields.io/travis/zillionare/jqadatpor.svg
         :target: https://travis-ci.com/zillionare/jqadatpor
