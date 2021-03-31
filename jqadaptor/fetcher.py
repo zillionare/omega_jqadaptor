@@ -16,7 +16,7 @@ import numpy as np
 import pandas as pd
 import pytz
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 minute_level_frames = ["60m", "30m", "15m", "5m", "1m"]
@@ -55,6 +55,7 @@ class Fetcher:
     JQFetcher is a subclass of QuotesFetcher
     """
 
+    connected = False
     tz = pytz.timezone("Asia/Shanghai")
 
     def __init__(self):
@@ -79,16 +80,20 @@ class Fetcher:
 
         account = str(account)
         password = str(password)
-        logger.info(
-            "login jqdatasdk with account %s",
-            account[: min(4, len(account))].ljust(7, "*"),
-        )
+
         try:
             jq.auth(account, password)
+
+            cls.connected = True
             logger.info("jqdata sdk login success")
         except Exception as e:
+            cls.connected = False
             logger.exception(e)
-            logger.warning("failed to login jqdatasdk")
+            logger.warning(
+                "login failed, account %s, password: %s",
+                account[: min(4, len(account))].ljust(7, "*"),
+                password[:2],
+            )
 
         return _instance
 
@@ -100,6 +105,10 @@ class Fetcher:
         frame_type: str,
         include_unclosed=True,
     ) -> np.array:
+        if not self.connected:
+            logger.warning("not connected.")
+            return None
+
         if type(end_at) not in [datetime.date, datetime.datetime]:
             raise TypeError("end_at must by type of datetime.date or datetime.datetime")
 
@@ -172,6 +181,10 @@ class Fetcher:
         it's not closed. In such case, the frame time will not aligned.
         :return:
         """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         logger.debug("fetching %s bars for %s until %s", n_bars, sec, end_at)
 
         if type(end_at) not in [datetime.date, datetime.datetime]:
@@ -238,6 +251,10 @@ class Fetcher:
         Returns:
 
         """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         types = ["stock", "fund", "index", "futures", "etf", "lof"]
         securities = jq.get_all_securities(types)
         securities.insert(0, "code", securities.index)
@@ -252,6 +269,10 @@ class Fetcher:
         return securities.values
 
     async def get_all_trade_days(self) -> np.array:
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         return jq.get_all_trade_days()
 
     def _to_numpy(self, df: pd.DataFrame) -> np.array:
@@ -288,6 +309,10 @@ class Fetcher:
     async def get_valuation(
         self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
     ) -> np.array:
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         """get `n` of `code`'s valuation records, end at day.
 
         对同一证券，返回的数据按升序排列（但取决于上游数据源）

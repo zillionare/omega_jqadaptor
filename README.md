@@ -1,6 +1,6 @@
 # jqadatpor
 
-<p align="center"> 
+<p align="center">
     <a href="https://pypi.org/project/zillionare-omega-adaptors-jq">
         <img src="https://img.shields.io/pypi/v/zillionare-omega-adaptors-jq.svg">
     </a>

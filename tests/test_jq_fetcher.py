@@ -30,6 +30,14 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         except Exception as e:
             logger.exception(e)
 
+    async def test_failed_login(self):
+        fetcher = await jqadaptor.create_instance(account="wrong", password="wrong")
+
+        log = logging.getLogger("jqadaptor.fetcher")
+        with mock.patch.object(log, "warning") as m:
+            self.assertIsNone(await fetcher.get_security_list())
+            self.assertTupleEqual(("not connected",), m.call_args.args)
+
     async def test_get_security_list(self):
         sec_list = await self.fetcher.get_security_list()
         print(sec_list[0])

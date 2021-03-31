@@ -41,3 +41,8 @@ This is first official release of zillionare-omega-adaptors-jq.
 This is a patch just to add releae notes. It's identical to 1.0.1 on binary sense.
 * change list
     1. add release notes
+
+# 1.0.3 (2020-3-31)
+* change list
+    1. fetcher will not try fetching data after login failed. This is friendly to server.
+    2. Fix: after use markdown as readme/history file type, forget correct manifest.in, this cause tox failed.
