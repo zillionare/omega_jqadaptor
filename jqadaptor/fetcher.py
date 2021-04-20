@@ -81,19 +81,20 @@ class Fetcher:
         account = str(account)
         password = str(password)
 
+        logger.info(
+            "login jqdatasdk with account %s, password: %s",
+            account[: min(4, len(account))].ljust(7, "*"),
+            password[:2],
+        )
         try:
             jq.auth(account, password)
 
             cls.connected = True
-            logger.info("jqdata sdk login success")
+            logger.info("jqdatasdk login success")
         except Exception as e:
             cls.connected = False
             logger.exception(e)
-            logger.warning(
-                "login failed, account %s, password: %s",
-                account[: min(4, len(account))].ljust(7, "*"),
-                password[:2],
-            )
+            logger.warning("jqdatasdk login failed")
 
         return _instance
 
