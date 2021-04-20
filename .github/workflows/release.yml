@@ -19,6 +19,9 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-18.04
+    env:
+      JQ_ACCOUNT: "${{secrets.JQ_ACCOUNT}}"
+      JQ_PASSWORD: ${{secrets.JQ_PASSWORD}}
 
     strategy:
       matrix:
