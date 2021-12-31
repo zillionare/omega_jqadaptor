@@ -8,16 +8,16 @@ __version__ = "0.1.1"
 import datetime
 import functools
 import logging
-from typing import List, Union
+from typing import List, Union, Optional, Tuple
 
 import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
+from numpy.typing import ArrayLike
 
 logger = logging.getLogger(__name__)
-
 
 minute_level_frames = ["60m", "30m", "15m", "5m", "1m"]
 
@@ -338,3 +338,81 @@ class Fetcher:
         )
 
         return self._to_numpy(records)
+
+    @staticmethod
+    def __dataframe_to_structured_array(
+        df: pd.DataFrame, dtypes: List[Tuple] = None
+    ) -> ArrayLike:
+        """convert dataframe (with all columns, and index possibly) to numpy structured arrays
+
+        `len(dtypes)` should be either equal to `len(df.columns)` or `len(df.columns) + 1`. In the later case, it implies to include `df.index` into converted array.
+
+        Args:
+            df: the one needs to be converted
+            dtypes: Defaults to None. If it's `None`, then dtypes of `df` is used, in such case, the `index` of `df` will not be converted.
+
+        Returns:
+            ArrayLike: [description]
+        """
+        v = df
+        if dtypes is not None:
+            dtypes_in_dict = {key: value for key, value in dtypes}
+
+            col_len = len(df.columns)
+            if len(dtypes) == col_len + 1:
+                v = df.reset_index()
+
+                rename_index_to = set(dtypes_in_dict.keys()).difference(set(df.columns))
+                v.rename(columns={"index": list(rename_index_to)[0]}, inplace=True)
+            elif col_len != len(dtypes):
+                raise ValueError(
+                    f"length of dtypes should be either {col_len} or {col_len + 1}, is {len(dtypes)}"
+                )
+
+            # re-arrange order of dtypes, in order to align with df.columns
+            dtypes = []
+            for name in v.columns:
+                dtypes.append((name, dtypes_in_dict[name]))
+        else:
+            dtypes = df.dtypes
+
+        return np.array(np.rec.fromrecords(v.values), dtype=dtypes)
+
+    async def get_price(
+        self,
+        sec: Union[List, str],
+        end_at: Union[str, datetime.datetime, datetime.date],
+        n_bars: Optional[int],
+        start_at: Optional[Union[str, datetime.datetime]] = None,
+    ) -> np.ndarray:
+        if type(end_at) not in (str, datetime.date, datetime.datetime):
+            raise TypeError("end_at must by type of datetime.date or datetime.datetime or str")
+        if not isinstance(n_bars, int):
+            raise TypeError("n_bars  must by type int")
+        if type(sec) not in (list, str):
+            raise TypeError("sec must by type of list or str")
+
+        fields = ['open', 'close', 'high', 'low', 'volume', 'money', 'high_limit', 'low_limit', 'avg', 'factor']
+        params = {
+            "security": sec,
+            "end_date": end_at,
+            "fields": fields,
+            "fq": None,
+            "fill_paused": False,
+            "frequency": "1m",
+        }
+        if start_at is not None:
+            if type(start_at) not in (str, datetime.datetime, datetime.date):
+                raise TypeError("start_at must by type of datetime.date or datetime.datetime or str")
+            params.update({"start_date": start_at})
+        if n_bars is not None:
+            params.update({"count": n_bars})
+        if "start_date" in params and "count" in params:
+            raise ValueError("start_date and count cannot appear at the same time")
+
+        bars = jq.get_price(**params)
+
+        if len(bars) == 0:
+            return None
+        bars = self.__dataframe_to_structured_array(bars)
+        return bars

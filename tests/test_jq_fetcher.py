@@ -191,3 +191,37 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             bars["600000.XSHG"]["frame"][0], arrow.get("2020-10-19").date()
         )
+
+    async def test_get_price(self):
+        secs = ["000001.XSHE"]
+        end_at = arrow.get("2020-10-23").date()
+        start_at = arrow.get("2020-10-17").date()
+        n_bars = 5
+        bars = await self.fetcher.get_price(secs, end_at=end_at, n_bars=n_bars)
+        self.assertIsNotNone(bars)
+        self.assertEqual(len(bars), 5)
+        try:
+            await self.fetcher.get_price(123, end_at=end_at, n_bars=n_bars)
+        except Exception as e:
+            self.assertIsInstance(e, TypeError)
+
+        try:
+            await self.fetcher.get_price(secs, end_at=123, n_bars=n_bars)
+        except Exception as e:
+            self.assertIsInstance(e, TypeError)
+
+        try:
+            await self.fetcher.get_price(secs, end_at=end_at, n_bars="123")
+        except Exception as e:
+            self.assertIsInstance(e, TypeError)
+
+        try:
+            await self.fetcher.get_price(secs, end_at=end_at, n_bars=n_bars, start_at=start_at)
+        except Exception as e:
+            self.assertIsInstance(e, ValueError)
+
+        try:
+            await self.fetcher.get_price(secs, end_at=end_at, n_bars=n_bars, start_at=123)
+        except Exception as e:
+            self.assertIsInstance(e, TypeError)
+
