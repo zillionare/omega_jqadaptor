@@ -191,3 +191,22 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(
             bars["600000.XSHG"]["frame"][0], arrow.get("2020-10-19").date()
         )
+
+    async def test_get_fund_list(self):
+        fund_list = await self.fetcher.get_fund_list()
+        self.assertTrue(len(fund_list) > 0)
+
+    async def test_get_fund_portfolio_stock(self):
+        codes = ["000001"]
+        portfolio_stocks = await self.fetcher.get_fund_portfolio_stock(codes)
+        self.assertTrue(len(portfolio_stocks))
+
+    async def test_get_fund_share_daily(self):
+        code = ["512690.XSHG"]
+        fund_share_daily = await self.fetcher.get_fund_share_daily(code)
+        self.assertTrue(len(fund_share_daily))
+
+    async def test_get_fund_net_value(self):
+        codes = ["000029"]
+        fund_net_value = await self.fetcher.get_fund_net_value(codes)
+        self.assertTrue(len(fund_net_value))
