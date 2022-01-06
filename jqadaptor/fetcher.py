@@ -448,6 +448,8 @@ class Fetcher:
             "operate_mode": "operate_mode",
             "start_date": "start_date",
             "end_date": "end_date",
+            "underlying_asset_type_id": "underlying_asset_type_id",
+            "underlying_asset_type": "underlying_asset_type",
         }
 
         df = df[fields.keys()]
