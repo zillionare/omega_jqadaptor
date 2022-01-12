@@ -416,3 +416,9 @@ class Fetcher:
             return None
         bars = self.__dataframe_to_structured_array(bars)
         return bars
+
+    async def get_query_count(self):
+        """
+        查询当日剩余可调用数据条数
+        """
+        return jq.get_query_count()
