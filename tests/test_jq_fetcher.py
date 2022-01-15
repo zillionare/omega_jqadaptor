@@ -260,3 +260,6 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         codes = ["000029"]
         fund_net_value = await self.fetcher.get_fund_net_value(codes)
         self.assertTrue(len(fund_net_value))
+    async def test_get_query_count(self):
+        query_count = await self.fetcher.get_query_count()
+        self.assertIsInstance(query_count, dict)
