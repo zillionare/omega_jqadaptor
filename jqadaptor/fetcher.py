@@ -14,8 +14,11 @@ import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
+from pandas.core.frame import DataFrame
 import pytz
 from numpy.typing import ArrayLike
+
+from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
 
@@ -386,13 +389,26 @@ class Fetcher:
         start_at: Optional[Union[str, datetime.datetime]] = None,
     ) -> np.ndarray:
         if type(end_at) not in (str, datetime.date, datetime.datetime):
-            raise TypeError("end_at must by type of datetime.date or datetime.datetime or str")
+            raise TypeError(
+                "end_at must by type of datetime.date or datetime.datetime or str"
+            )
         if not isinstance(n_bars, int):
             raise TypeError("n_bars  must by type int")
         if type(sec) not in (list, str):
             raise TypeError("sec must by type of list or str")
 
-        fields = ['open', 'close', 'high', 'low', 'volume', 'money', 'high_limit', 'low_limit', 'avg', 'factor']
+        fields = [
+            "open",
+            "close",
+            "high",
+            "low",
+            "volume",
+            "money",
+            "high_limit",
+            "low_limit",
+            "avg",
+            "factor",
+        ]
         params = {
             "security": sec,
             "end_date": end_at,
@@ -403,7 +419,9 @@ class Fetcher:
         }
         if start_at is not None:
             if type(start_at) not in (str, datetime.datetime, datetime.date):
-                raise TypeError("start_at must by type of datetime.date or datetime.datetime or str")
+                raise TypeError(
+                    "start_at must by type of datetime.date or datetime.datetime or str"
+                )
             params.update({"start_date": start_at})
         if n_bars is not None:
             params.update({"count": n_bars})
@@ -416,6 +434,310 @@ class Fetcher:
             return None
         bars = self.__dataframe_to_structured_array(bars)
         return bars
+
+    def _to_fund_numpy(self, df: pd.DataFrame) -> np.array:
+        df["start_date"] = pd.to_datetime(df["start_date"]).dt.date
+        df["end_date"] = pd.to_datetime(df["end_date"]).dt.date
+
+        fields = {
+            "main_code": "code",
+            "name": "name",
+            "advisor": "advisor",
+            "trustee": "trustee",
+            "operate_mode_id": "operate_mode_id",
+            "operate_mode": "operate_mode",
+            "start_date": "start_date",
+            "end_date": "end_date",
+            "underlying_asset_type_id": "underlying_asset_type_id",
+            "underlying_asset_type": "underlying_asset_type",
+        }
+
+        df = df[fields.keys()]
+
+        dtypes = [
+            (fields[_name], _type) for _name, _type in zip(df.dtypes.index, df.dtypes)
+        ]
+        return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
+
+    async def get_fund_list(self, codes: Union[str, List[str]] = None) -> np.ndarray:
+        """
+        获取所有的基金基本信息
+        Args:
+        Returns:
+            np.array: [基金的基本信息]
+        """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
+        if codes and isinstance(codes, str):
+            codes = [codes]
+        fund_count_q = jq.query(func.count(jq.finance.FUND_MAIN_INFO.id))
+        fund_q = jq.query(jq.finance.FUND_MAIN_INFO).order_by(
+            jq.finance.FUND_MAIN_INFO.id.asc()
+        )
+        if codes:
+            fund_count_q = fund_count_q.filter(
+                jq.finance.FUND_MAIN_INFO.main_code.in_(codes)
+            )
+            fund_q = fund_q.filter(jq.finance.FUND_MAIN_INFO.main_code.in_(codes))
+
+        fund_count = jq.finance.run_query(fund_count_q)["count_1"][0]
+        dfs: List[pd.DataFrame] = []
+        page = 0
+        while page * 3000 < fund_count:
+            df1 = jq.finance.run_query(fund_q.offset(page * 3000).limit(3000))
+            dfs.append(df1)
+            page += 1
+        funds: DataFrame = (
+            pd.concat(dfs)
+            if dfs
+            else pd.DataFrame(
+                columns=[
+                    "main_code",
+                    "name",
+                    "advisor",
+                    "trustee",
+                    "operate_mode_id",
+                    "operate_mode",
+                    "start_date",
+                    "end_date",
+                    "underlying_asset_type_id",
+                    "underlying_asset_type",
+                ]
+            )
+        )
+        funds["start_date"] = funds["start_date"].apply(
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}" if s else "2099-01-01"
+        )
+        funds["end_date"] = funds["end_date"].apply(
+            lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}" if s else "2099-01-01"
+        )
+
+        return self._to_fund_numpy(funds)
+
+    def _to_fund_portfolio_stock_numpy(self, df: pd.DataFrame) -> np.array:
+        fields = {
+            "code": "code",
+            "period_start": "period_start",
+            "period_end": "period_end",
+            "pub_date": "pub_date",
+            "report_type_id": "report_type_id",
+            "report_type": "report_type",
+            "rank": "rank",
+            "symbol": "symbol",
+            "name": "name",
+            "shares": "shares",
+            "market_cap": "market_cap",
+            "proportion": "proportion",
+            "deadline": "deadline",
+        }
+
+        df = df[fields.keys()]
+
+        dtypes = [
+            (fields[_name], _type) for _name, _type in zip(df.dtypes.index, df.dtypes)
+        ]
+        return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
+
+    async def get_fund_portfolio_stock(
+        self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
+    ) -> np.array:
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+        if codes and isinstance(codes, str):
+            codes = [codes]
+        fund_count_q = jq.query(func.count(jq.finance.FUND_PORTFOLIO_STOCK.id))
+        q = jq.query(jq.finance.FUND_PORTFOLIO_STOCK)
+        if codes:
+            q = q.filter(jq.finance.FUND_PORTFOLIO_STOCK.code.in_(codes))
+            fund_count_q = fund_count_q.filter(
+                jq.finance.FUND_PORTFOLIO_STOCK.code.in_(codes)
+            )
+
+        if pub_date:
+            q = q.filter(jq.finance.FUND_PORTFOLIO_STOCK.pub_date == pub_date)
+            fund_count_q = fund_count_q.filter(
+                jq.finance.FUND_PORTFOLIO_STOCK.pub_date == pub_date
+            )
+
+        fund_count = jq.finance.run_query(fund_count_q)["count_1"][0]
+
+        dfs: List[pd.DataFrame] = []
+        page = 0
+        while page * 3000 < fund_count:
+            df1 = jq.finance.run_query(q.offset(page * 3000).limit(3000))
+            dfs.append(df1)
+            page += 1
+        df: DataFrame = (
+            pd.concat(dfs)
+            if dfs
+            else pd.DataFrame(
+                columns=[
+                    "code",
+                    "period_start",
+                    "period_end",
+                    "pub_date",
+                    "report_type_id",
+                    "report_type",
+                    "rank",
+                    "symbol",
+                    "name",
+                    "shares",
+                    "market_cap",
+                    "proportion",
+                    "deadline",
+                ]
+            )
+        )
+        df["deadline"] = df["pub_date"].map(
+            lambda x: (
+                x
+                + pd.tseries.offsets.DateOffset(
+                    months=-((x.month - 1) % 3), days=1 - x.day
+                )
+                - datetime.timedelta(days=1)
+            ).date()
+        )
+        df = df.sort_values(
+            by=["code", "pub_date", "symbol", "report_type", "period_end"],
+            ascending=[False, False, False, False, False],
+        ).drop_duplicates(
+            subset=[
+                "code",
+                "pub_date",
+                "symbol",
+                "report_type",
+            ],
+            keep="first",
+        )
+        df = df.groupby(by="code").apply(lambda x: x.nlargest(10, "shares"))
+        if df.empty:
+            df = pd.DataFrame(
+                columns=[
+                    "code",
+                    "period_start",
+                    "period_end",
+                    "pub_date",
+                    "report_type_id",
+                    "report_type",
+                    "rank",
+                    "symbol",
+                    "name",
+                    "shares",
+                    "market_cap",
+                    "proportion",
+                    "deadline",
+                ]
+            )
+        return self._to_fund_portfolio_stock_numpy(df)
+
+    def _to_fund_net_value_numpy(self, df: pd.DataFrame) -> np.array:
+        df["day"] = pd.to_datetime(df["day"]).dt.date
+
+        fields = {
+            "code": "code",
+            "net_value": "net_value",
+            "sum_value": "sum_value",
+            "factor": "factor",
+            "acc_factor": "acc_factor",
+            "refactor_net_value": "refactor_net_value",
+            "day": "day",
+        }
+
+        df = df[fields.keys()]
+
+        dtypes = [
+            (fields[_name], _type) for _name, _type in zip(df.dtypes.index, df.dtypes)
+        ]
+        return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
+
+    async def get_fund_net_value(
+        self,
+        codes: Union[str, List[str]],
+        day: datetime.date = None,
+    ) -> np.array:
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+        if codes and isinstance(codes, str):
+            codes = [codes]
+
+        day = day or (datetime.datetime.now().date() - datetime.timedelta(days=1))
+        q = jq.query(jq.finance.FUND_NET_VALUE).filter(
+            jq.finance.FUND_NET_VALUE.day == day
+        )
+        q_count = jq.query(func.count(jq.finance.FUND_NET_VALUE.id)).filter(
+            jq.finance.FUND_NET_VALUE.day == day
+        )
+        if codes:
+            q = q.filter(jq.finance.FUND_NET_VALUE.code.in_(codes))
+            q_count = q_count.filter(jq.finance.FUND_NET_VALUE.code.in_(codes))
+        fund_count = jq.finance.run_query(q_count)["count_1"][0]
+        dfs: List[pd.DataFrame] = []
+        page = 0
+        while page * 3000 < fund_count:
+            df1: DataFrame = jq.finance.run_query(q.offset(page * 3000).limit(3000))
+            if not df1.empty:
+                dfs.append(df1)
+                page += 1
+        df = (
+            pd.concat(dfs)
+            if dfs
+            else pd.DataFrame(
+                columns=[
+                    "code",
+                    "net_value",
+                    "sum_value",
+                    "factor",
+                    "acc_factor",
+                    "refactor_net_value",
+                    "day",
+                ]
+            )
+        )
+        return self._to_fund_net_value_numpy(df)
+
+    def _to_fund_share_daily_numpy(self, df: pd.DataFrame) -> np.array:
+        df["day"] = pd.to_datetime(df["pub_date"]).dt.date
+
+        fields = {
+            "code": "code",
+            "total_tna": "total_tna",
+            "day": "date",
+            "name": "name",
+        }
+
+        df = df[fields.keys()]
+
+        dtypes = [
+            (fields[_name], _type) for _name, _type in zip(df.dtypes.index, df.dtypes)
+        ]
+        return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
+
+    async def get_fund_share_daily(
+        self, codes: Union[str, List[str]] = None, day: datetime.date = None
+    ) -> np.array:
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
+        if codes and isinstance(codes, str):
+            codes = [codes]
+        day = day or (datetime.datetime.now().date() - datetime.timedelta(days=1))
+
+        q_fund_fin_indicator = jq.query(jq.finance.FUND_FIN_INDICATOR).filter(
+            jq.finance.FUND_FIN_INDICATOR.pub_date == day
+        )
+        if codes:
+            q_fund_fin_indicator = q_fund_fin_indicator.filter(
+                jq.finance.FUND_FIN_INDICATOR.code.in_(codes)
+            )
+        df: DataFrame = jq.finance.run_query(q_fund_fin_indicator)
+        df = df.drop_duplicates(subset=["code", "pub_date"], keep="first")
+        df["total_tna"] = df["total_tna"].fillna(0)
+        return self._to_fund_share_daily_numpy(df)
 
     async def get_query_count(self):
         """

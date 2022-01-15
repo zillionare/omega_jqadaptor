@@ -216,14 +216,50 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(e, TypeError)
 
         try:
-            await self.fetcher.get_price(secs, end_at=end_at, n_bars=n_bars, start_at=start_at)
+            await self.fetcher.get_price(
+                secs, end_at=end_at, n_bars=n_bars, start_at=start_at
+            )
         except Exception as e:
             self.assertIsInstance(e, ValueError)
 
         try:
-            await self.fetcher.get_price(secs, end_at=end_at, n_bars=n_bars, start_at=123)
+            await self.fetcher.get_price(
+                secs, end_at=end_at, n_bars=n_bars, start_at=123
+            )
         except Exception as e:
             self.assertIsInstance(e, TypeError)
+
+    async def test_get_fund_list(self):
+        fund_list = await self.fetcher.get_fund_list()
+        self.assertTrue(len(fund_list) > 0)
+
+        code = ["233333"]
+        vals = await self.fetcher.get_fund_list(codes=code)
+        self.assertFalse(len(vals))
+
+    async def test_get_fund_portfolio_stock(self):
+
+        await self.fetcher.get_fund_portfolio_stock(None, pub_date="2021-12-21")
+
+        codes = ["000001"]
+        portfolio_stocks = await self.fetcher.get_fund_portfolio_stock(codes)
+        self.assertTrue(len(portfolio_stocks))
+
+    async def test_get_fund_share_daily(self):
+        code = ["512690"]
+        day = arrow.get("2021-10-26").date()
+        fund_share_daily = await self.fetcher.get_fund_share_daily(code, day=day)
+        self.assertTrue(len(fund_share_daily))
+
+        code = None
+        day = arrow.get("2021-10-26").date()
+        fund_share_daily = await self.fetcher.get_fund_share_daily(code, day=day)
+        self.assertTrue(len(fund_share_daily))
+
+    async def test_get_fund_net_value(self):
+        codes = ["000029"]
+        fund_net_value = await self.fetcher.get_fund_net_value(codes)
+        self.assertTrue(len(fund_net_value))
 
     async def test_get_query_count(self):
         query_count = await self.fetcher.get_query_count()
