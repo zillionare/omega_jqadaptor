@@ -738,6 +738,7 @@ class Fetcher:
         df = df.drop_duplicates(subset=["code", "pub_date"], keep="first")
         df["total_tna"] = df["total_tna"].fillna(0)
         return self._to_fund_share_daily_numpy(df)
+
     async def get_query_count(self):
         """
         查询当日剩余可调用数据条数
