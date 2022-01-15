@@ -381,58 +381,34 @@ class Fetcher:
 
         return np.array(np.rec.fromrecords(v.values), dtype=dtypes)
 
-    async def get_price(
+    async def get_high_limit_price(
         self,
         sec: Union[List, str],
-        end_at: Union[str, datetime.datetime, datetime.date],
-        n_bars: Optional[int],
-        start_at: Optional[Union[str, datetime.datetime]] = None,
+        dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
-        if type(end_at) not in (str, datetime.date, datetime.datetime):
+        if type(dt) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
                 "end_at must by type of datetime.date or datetime.datetime or str"
             )
-        if not isinstance(n_bars, int):
-            raise TypeError("n_bars  must by type int")
         if type(sec) not in (list, str):
             raise TypeError("sec must by type of list or str")
 
-        fields = [
-            "open",
-            "close",
-            "high",
-            "low",
-            "volume",
-            "money",
-            "high_limit",
-            "low_limit",
-            "avg",
-            "factor",
-        ]
+        fields = ['high_limit', 'low_limit']
         params = {
             "security": sec,
-            "end_date": end_at,
+            "end_date": dt,
             "fields": fields,
             "fq": None,
             "fill_paused": False,
-            "frequency": "1m",
+            "frequency": "1d",
+            "count": 1
         }
-        if start_at is not None:
-            if type(start_at) not in (str, datetime.datetime, datetime.date):
-                raise TypeError(
-                    "start_at must by type of datetime.date or datetime.datetime or str"
-                )
-            params.update({"start_date": start_at})
-        if n_bars is not None:
-            params.update({"count": n_bars})
-        if "start_date" in params and "count" in params:
-            raise ValueError("start_date and count cannot appear at the same time")
-
         bars = jq.get_price(**params)
 
         if len(bars) == 0:
             return None
-        bars = self.__dataframe_to_structured_array(bars)
+        bars = self.__dataframe_to_structured_array(
+            bars, [(_name, _type) for _name, _type in zip(bars.dtypes.index, bars.dtypes)])
         return bars
 
     def _to_fund_numpy(self, df: pd.DataFrame) -> np.array:
