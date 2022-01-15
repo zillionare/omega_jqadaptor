@@ -233,13 +233,25 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         fund_list = await self.fetcher.get_fund_list()
         self.assertTrue(len(fund_list) > 0)
 
+        code = ["233333"]
+        vals = await self.fetcher.get_fund_list(codes=code)
+        self.assertFalse(len(vals))
+
     async def test_get_fund_portfolio_stock(self):
+
+        await self.fetcher.get_fund_portfolio_stock(None, pub_date="2021-12-21")
+
         codes = ["000001"]
         portfolio_stocks = await self.fetcher.get_fund_portfolio_stock(codes)
         self.assertTrue(len(portfolio_stocks))
 
     async def test_get_fund_share_daily(self):
         code = ["512690"]
+        day = arrow.get("2021-10-26").date()
+        fund_share_daily = await self.fetcher.get_fund_share_daily(code, day=day)
+        self.assertTrue(len(fund_share_daily))
+
+        code = None
         day = arrow.get("2021-10-26").date()
         fund_share_daily = await self.fetcher.get_fund_share_daily(code, day=day)
         self.assertTrue(len(fund_share_daily))

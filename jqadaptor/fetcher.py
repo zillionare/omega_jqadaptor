@@ -489,7 +489,24 @@ class Fetcher:
             df1 = jq.finance.run_query(fund_q.offset(page * 3000).limit(3000))
             dfs.append(df1)
             page += 1
-        funds: DataFrame = pd.concat(dfs)
+        funds: DataFrame = (
+            pd.concat(dfs)
+            if dfs
+            else pd.DataFrame(
+                columns=[
+                    "main_code",
+                    "name",
+                    "advisor",
+                    "trustee",
+                    "operate_mode_id",
+                    "operate_mode",
+                    "start_date",
+                    "end_date",
+                    "underlying_asset_type_id",
+                    "underlying_asset_type",
+                ]
+            )
+        )
         funds["start_date"] = funds["start_date"].apply(
             lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}" if s else "2099-01-01"
         )
@@ -570,13 +587,18 @@ class Fetcher:
                     "shares",
                     "market_cap",
                     "proportion",
+                    "deadline",
                 ]
             )
         )
         df["deadline"] = df["pub_date"].map(
-            lambda x: x
-            + pd.tseries.offsets.DateOffset(months=-((x.month - 1) % 3), days=1 - x.day)
-            - datetime.timedelta(days=1)
+            lambda x: (
+                x
+                + pd.tseries.offsets.DateOffset(
+                    months=-((x.month - 1) % 3), days=1 - x.day
+                )
+                - datetime.timedelta(days=1)
+            ).date()
         )
         df = df.sort_values(
             by=["code", "pub_date", "symbol", "report_type", "period_end"],
@@ -591,6 +613,24 @@ class Fetcher:
             keep="first",
         )
         df = df.groupby(by="code").apply(lambda x: x.nlargest(10, "shares"))
+        if df.empty:
+            df = pd.DataFrame(
+                columns=[
+                    "code",
+                    "period_start",
+                    "period_end",
+                    "pub_date",
+                    "report_type_id",
+                    "report_type",
+                    "rank",
+                    "symbol",
+                    "name",
+                    "shares",
+                    "market_cap",
+                    "proportion",
+                    "deadline",
+                ]
+            )
         return self._to_fund_portfolio_stock_numpy(df)
 
     def _to_fund_net_value_numpy(self, df: pd.DataFrame) -> np.array:
@@ -617,7 +657,6 @@ class Fetcher:
         self,
         codes: Union[str, List[str]],
         day: datetime.date = None,
-        to_numpy: bool = True,
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -658,8 +697,6 @@ class Fetcher:
                 ]
             )
         )
-        if not to_numpy:
-            return df
         return self._to_fund_net_value_numpy(df)
 
     def _to_fund_share_daily_numpy(self, df: pd.DataFrame) -> np.array:
