@@ -261,3 +261,4 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
     async def test_get_query_count(self):
         query_count = await self.fetcher.get_query_count()
         self.assertIsInstance(query_count, dict)
+

@@ -5,10 +5,12 @@ __email__ = "code@jieyu.ai"
 __version__ = "0.1.1"
 
 # -*- coding: utf-8 -*-
+import asyncio
 import datetime
 import functools
 import logging
 from typing import List, Union, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor
 
 import dateutil
 import jqdatasdk as jq
@@ -23,6 +25,19 @@ from sqlalchemy import func
 logger = logging.getLogger(__name__)
 
 minute_level_frames = ["60m", "30m", "15m", "5m", "1m"]
+
+
+def async_concurrent(executors):
+    def decorator(f):
+        @functools.wraps(f)
+        async def wrapper(*args, **kwargs):
+            p = functools.partial(f, *args, **kwargs)
+            loop = asyncio.get_running_loop()
+            return await loop.run_in_executor(executors, p)
+
+        return wrapper
+
+    return decorator
 
 
 class FetcherQuotaError(BaseException):
@@ -60,13 +75,18 @@ class Fetcher:
 
     connected = False
     tz = pytz.timezone("Asia/Shanghai")
+    executor = ThreadPoolExecutor(1)
+
+    account = None
+    password = None
 
     def __init__(self):
         pass
 
     @classmethod
-    async def create_instance(
-        cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
+    @async_concurrent(executor)
+    def create_instance(
+            cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
     ):
         """
         创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
@@ -78,36 +98,19 @@ class Fetcher:
         Returns:
 
         """
+
         cls.tz = dateutil.tz.gettz(tz)
-        _instance = Fetcher()
 
-        account = str(account)
-        password = str(password)
+        cls.login(account, password, **kwargs)
 
-        logger.info(
-            "login jqdatasdk with account %s, password: %s",
-            account[: min(4, len(account))].ljust(7, "*"),
-            password[:2],
-        )
-        try:
-            jq.auth(account, password)
-
-            cls.connected = True
-            logger.info("jqdatasdk login success")
-        except Exception as e:
-            cls.connected = False
-            logger.exception(e)
-            logger.warning("jqdatasdk login failed")
-
-        return _instance
-
-    async def get_bars_batch(
-        self,
-        secs: List[str],
-        end_at: datetime.datetime,
-        n_bars: int,
-        frame_type: str,
-        include_unclosed=True,
+    @async_concurrent(executor)
+    def get_bars_batch(
+            self,
+            secs: List[str],
+            end_at: datetime.datetime,
+            n_bars: int,
+            frame_type: str,
+            include_unclosed=True,
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected.")
@@ -164,13 +167,14 @@ class Fetcher:
 
         return results
 
-    async def get_bars(
-        self,
-        sec: str,
-        end_at: Union[datetime.date, datetime.datetime],
-        n_bars: int,
-        frame_type: str,
-        include_unclosed=True,
+    @async_concurrent(executor)
+    def get_bars(
+            self,
+            sec: str,
+            end_at: Union[datetime.date, datetime.datetime],
+            n_bars: int,
+            frame_type: str,
+            include_unclosed=True,
     ) -> np.array:
         """
         fetch quotes for security (code), and convert it to a numpy array
@@ -249,7 +253,8 @@ class Fetcher:
             else:
                 raise e
 
-    async def get_security_list(self) -> np.ndarray:
+    @async_concurrent(executor)
+    def get_security_list(self) -> np.ndarray:
         """
 
         Returns:
@@ -272,7 +277,8 @@ class Fetcher:
         )
         return securities.values
 
-    async def get_all_trade_days(self) -> np.array:
+    @async_concurrent(executor)
+    def get_all_trade_days(self) -> np.array:
         if not self.connected:
             logger.warning("not connected")
             return None
@@ -310,8 +316,9 @@ class Fetcher:
         # to get a structued array
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_valuation(
-        self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
+    @async_concurrent(executor)
+    def get_valuation(
+            self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -344,7 +351,7 @@ class Fetcher:
 
     @staticmethod
     def __dataframe_to_structured_array(
-        df: pd.DataFrame, dtypes: List[Tuple] = None
+            df: pd.DataFrame, dtypes: List[Tuple] = None
     ) -> ArrayLike:
         """convert dataframe (with all columns, and index possibly) to numpy structured arrays
 
@@ -381,10 +388,11 @@ class Fetcher:
 
         return np.array(np.rec.fromrecords(v.values), dtype=dtypes)
 
-    async def get_high_limit_price(
-        self,
-        sec: Union[List, str],
-        dt: Union[str, datetime.datetime, datetime.date]
+    @async_concurrent(executor)
+    def get_high_limit_price(
+            self,
+            sec: Union[List, str],
+            dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
         if type(dt) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
@@ -435,7 +443,8 @@ class Fetcher:
         ]
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_fund_list(self, codes: Union[str, List[str]] = None) -> np.ndarray:
+    @async_concurrent(executor)
+    def get_fund_list(self, codes: Union[str, List[str]] = None) -> np.ndarray:
         """
         获取所有的基金基本信息
         Args:
@@ -516,8 +525,9 @@ class Fetcher:
         ]
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_fund_portfolio_stock(
-        self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
+    @async_concurrent(executor)
+    def get_fund_portfolio_stock(
+            self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -569,11 +579,11 @@ class Fetcher:
         )
         df["deadline"] = df["pub_date"].map(
             lambda x: (
-                x
-                + pd.tseries.offsets.DateOffset(
-                    months=-((x.month - 1) % 3), days=1 - x.day
-                )
-                - datetime.timedelta(days=1)
+                    x
+                    + pd.tseries.offsets.DateOffset(
+                months=-((x.month - 1) % 3), days=1 - x.day
+            )
+                    - datetime.timedelta(days=1)
             ).date()
         )
         df = df.sort_values(
@@ -629,10 +639,11 @@ class Fetcher:
         ]
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_fund_net_value(
-        self,
-        codes: Union[str, List[str]],
-        day: datetime.date = None,
+    @async_concurrent(executor)
+    def get_fund_net_value(
+            self,
+            codes: Union[str, List[str]],
+            day: datetime.date = None,
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -692,8 +703,9 @@ class Fetcher:
         ]
         return np.array([tuple(x) for x in df.to_numpy()], dtype=dtypes)
 
-    async def get_fund_share_daily(
-        self, codes: Union[str, List[str]] = None, day: datetime.date = None
+    @async_concurrent(executor)
+    def get_fund_share_daily(
+            self, codes: Union[str, List[str]] = None, day: datetime.date = None
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -715,8 +727,41 @@ class Fetcher:
         df["total_tna"] = df["total_tna"].fillna(0)
         return self._to_fund_share_daily_numpy(df)
 
-    async def get_query_count(self):
+    @async_concurrent(executor)
+    def get_query_count(self):
         """
         查询当日剩余可调用数据条数
         """
         return jq.get_query_count()
+
+    @classmethod
+    def login(cls, account, password, **kwargs):
+        """登录"""
+        account = str(account)
+        password = str(password)
+
+        logger.info(
+            "login jqdatasdk with account %s, password: %s",
+            account[: min(4, len(account))].ljust(7, "*"),
+            password[:2],
+        )
+        try:
+            jq.auth(account, password)
+            cls.connected = True
+            cls.account = account
+            cls.password = password
+            logger.info("jqdatasdk login success")
+        except Exception as e:
+            cls.connected = False
+            logger.exception(e)
+            logger.warning("jqdatasdk login failed")
+
+    @classmethod
+    def logout(cls):
+        """退出登录"""
+        return jq.logout()
+
+    @classmethod
+    def reconnect(cls):
+        cls.logout()
+        cls.login(cls.account, cls.password)
