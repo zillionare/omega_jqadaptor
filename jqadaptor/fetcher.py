@@ -390,6 +390,7 @@ class Fetcher(QuotesFetcher):
             "fill_paused": False,
             "frequency": "1d",
             "count": 1,
+            "skip_paused": True
         }
         bars = jq.get_price(**params)
 
