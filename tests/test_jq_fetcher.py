@@ -195,7 +195,10 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
     async def test_get_high_limit_price(self):
         secs = ["000001.XSHE"]
         end_at = arrow.get("2020-10-23").date()
-        bars = await self.fetcher.get_high_limit_price(secs, dt=end_at,)
+        bars = await self.fetcher.get_high_limit_price(
+            secs,
+            dt=end_at,
+        )
         self.assertIsNotNone(bars)
         try:
             await self.fetcher.get_high_limit_price(123, dt=end_at)
@@ -213,16 +216,12 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             self.assertIsInstance(e, TypeError)
 
         try:
-            await self.fetcher.get_high_limit_price(
-                secs, dt=end_at
-            )
+            await self.fetcher.get_high_limit_price(secs, dt=end_at)
         except Exception as e:
             self.assertIsInstance(e, ValueError)
 
         try:
-            await self.fetcher.get_high_limit_price(
-                secs, dt=end_at
-            )
+            await self.fetcher.get_high_limit_price(secs, dt=end_at)
         except Exception as e:
             self.assertIsInstance(e, TypeError)
 
@@ -261,4 +260,3 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
     async def test_get_query_count(self):
         query_count = await self.fetcher.get_query_count()
         self.assertIsInstance(query_count, dict)
-

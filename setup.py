@@ -17,6 +17,7 @@ requirements = [
     "SQLAlchemy>=1.3.23,<1.4",
     "pytz>=2019.3",
     "cfg4py>=0.8",
+    "zillionare-core-types>=0.2.0",
 ]
 
 setup_requirements = []

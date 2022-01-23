@@ -2,7 +2,7 @@
 
 name: dev build
 
-# Controls when the action will run. 
+# Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
@@ -39,7 +39,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements_dev.txt
-            
+
       - name: test with tox
         run:
           tox
@@ -51,7 +51,7 @@ jobs:
         with:
           fail_ci_if_error: true
           files: coverage.xml
-          
+
       - name: Build wheels and source tarball
         run: make dist
 

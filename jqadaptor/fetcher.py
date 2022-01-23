@@ -9,17 +9,17 @@ import asyncio
 import datetime
 import functools
 import logging
-from typing import List, Union, Optional, Tuple
 from concurrent.futures import ThreadPoolExecutor
+from typing import List, Tuple, Union
 
 import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
-from pandas.core.frame import DataFrame
 import pytz
+from coretypes import QuotesFetcher, stock_bars_dtype
 from numpy.typing import ArrayLike
-
+from pandas.core.frame import DataFrame
 from sqlalchemy import func
 
 logger = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def singleton(cls):
 
 
 @singleton
-class Fetcher:
+class Fetcher(QuotesFetcher):
     """
     JQFetcher is a subclass of QuotesFetcher
     """
@@ -86,7 +86,7 @@ class Fetcher:
     @classmethod
     @async_concurrent(executor)
     def create_instance(
-            cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
+        cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
     ):
         """
         创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
@@ -105,12 +105,12 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_bars_batch(
-            self,
-            secs: List[str],
-            end_at: datetime.datetime,
-            n_bars: int,
-            frame_type: str,
-            include_unclosed=True,
+        self,
+        secs: List[str],
+        end_at: datetime.datetime,
+        n_bars: int,
+        frame_type: str,
+        include_unclosed=True,
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected.")
@@ -146,16 +146,7 @@ class Fetcher:
         for code, bars in resp.items():
             bars = np.array(
                 bars,
-                dtype=[
-                    ("frame", "O"),
-                    ("open", "f4"),
-                    ("high", "f4"),
-                    ("low", "f4"),
-                    ("close", "f4"),
-                    ("volume", "f8"),
-                    ("amount", "f8"),
-                    ("factor", "f4"),
-                ],
+                dtype=stock_bars_dtype,
             )
 
             if frame_type in minute_level_frames:
@@ -169,12 +160,12 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_bars(
-            self,
-            sec: str,
-            end_at: Union[datetime.date, datetime.datetime],
-            n_bars: int,
-            frame_type: str,
-            include_unclosed=True,
+        self,
+        sec: str,
+        end_at: Union[datetime.date, datetime.datetime],
+        n_bars: int,
+        frame_type: str,
+        include_unclosed=True,
     ) -> np.array:
         """
         fetch quotes for security (code), and convert it to a numpy array
@@ -223,16 +214,7 @@ class Fetcher:
             # convert to omega supported format
             bars = np.array(
                 bars,
-                dtype=[
-                    ("frame", "O"),
-                    ("open", "f4"),
-                    ("high", "f4"),
-                    ("low", "f4"),
-                    ("close", "f4"),
-                    ("volume", "f8"),
-                    ("amount", "f8"),
-                    ("factor", "f4"),
-                ],
+                dtype=stock_bars_dtype,
             )
             if len(bars) == 0:
                 logger.warning(
@@ -318,7 +300,7 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_valuation(
-            self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
+        self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -351,7 +333,7 @@ class Fetcher:
 
     @staticmethod
     def __dataframe_to_structured_array(
-            df: pd.DataFrame, dtypes: List[Tuple] = None
+        df: pd.DataFrame, dtypes: List[Tuple] = None
     ) -> ArrayLike:
         """convert dataframe (with all columns, and index possibly) to numpy structured arrays
 
@@ -390,9 +372,7 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_high_limit_price(
-            self,
-            sec: Union[List, str],
-            dt: Union[str, datetime.datetime, datetime.date]
+        self, sec: Union[List, str], dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
         if type(dt) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
@@ -401,7 +381,7 @@ class Fetcher:
         if type(sec) not in (list, str):
             raise TypeError("sec must by type of list or str")
 
-        fields = ['high_limit', 'low_limit']
+        fields = ["high_limit", "low_limit"]
         params = {
             "security": sec,
             "end_date": dt,
@@ -409,14 +389,16 @@ class Fetcher:
             "fq": None,
             "fill_paused": False,
             "frequency": "1d",
-            "count": 1
+            "count": 1,
         }
         bars = jq.get_price(**params)
 
         if len(bars) == 0:
             return None
         bars = self.__dataframe_to_structured_array(
-            bars, [(_name, _type) for _name, _type in zip(bars.dtypes.index, bars.dtypes)])
+            bars,
+            [(_name, _type) for _name, _type in zip(bars.dtypes.index, bars.dtypes)],
+        )
         return bars
 
     def _to_fund_numpy(self, df: pd.DataFrame) -> np.array:
@@ -527,7 +509,7 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_fund_portfolio_stock(
-            self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
+        self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -579,11 +561,11 @@ class Fetcher:
         )
         df["deadline"] = df["pub_date"].map(
             lambda x: (
-                    x
-                    + pd.tseries.offsets.DateOffset(
-                months=-((x.month - 1) % 3), days=1 - x.day
-            )
-                    - datetime.timedelta(days=1)
+                x
+                + pd.tseries.offsets.DateOffset(
+                    months=-((x.month - 1) % 3), days=1 - x.day
+                )
+                - datetime.timedelta(days=1)
             ).date()
         )
         df = df.sort_values(
@@ -641,9 +623,9 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_fund_net_value(
-            self,
-            codes: Union[str, List[str]],
-            day: datetime.date = None,
+        self,
+        codes: Union[str, List[str]],
+        day: datetime.date = None,
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -705,7 +687,7 @@ class Fetcher:
 
     @async_concurrent(executor)
     def get_fund_share_daily(
-            self, codes: Union[str, List[str]] = None, day: datetime.date = None
+        self, codes: Union[str, List[str]] = None, day: datetime.date = None
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -733,6 +715,20 @@ class Fetcher:
         查询当日剩余可调用数据条数
         """
         return jq.get_query_count()
+
+    @async_concurrent(executor)
+    def get_quota(self) -> dict:
+        """查询quota使用情况
+
+        返回值为一个dict, key为"total"，"spare"
+        Returns:
+            dict: quota
+        """
+        quota = jq.get_query_count()
+        assert "total" in quota
+        assert "spare" in quota
+
+        return quota
 
     @classmethod
     def login(cls, account, password, **kwargs):

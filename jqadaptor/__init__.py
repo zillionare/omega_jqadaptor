@@ -1,10 +1,11 @@
 """joinquant adaptor for zillionare"""
+import pkg_resources
+
+from .fetcher import Fetcher
 
 __author__ = """Aaron Yang"""
 __email__ = "code@jieyu.ai"
-__version__ = "1.0.6"
-
-from .fetcher import Fetcher
+__version__ = pkg_resources.get_distribution("zillionare-omega-adaptors-jq").version
 
 
 async def create_instance(**kwargs):
