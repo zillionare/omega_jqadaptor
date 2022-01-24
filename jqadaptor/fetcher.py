@@ -580,7 +580,6 @@ class Fetcher(QuotesFetcher):
             ],
             keep="first",
         )
-        df = df.groupby(by="code").apply(lambda x: x.nlargest(10, "shares"))
         if df.empty:
             df = pd.DataFrame(
                 columns=[
@@ -599,6 +598,8 @@ class Fetcher(QuotesFetcher):
                     "deadline",
                 ]
             )
+        else:
+            df = df.groupby(by="code").apply(lambda x: x.nlargest(10, "shares"))
         return self._to_fund_portfolio_stock_numpy(df)
 
     def _to_fund_net_value_numpy(self, df: pd.DataFrame) -> np.array:
