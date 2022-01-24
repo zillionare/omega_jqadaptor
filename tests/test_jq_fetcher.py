@@ -254,7 +254,8 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
 
     async def test_get_fund_net_value(self):
         codes = ["000029"]
-        fund_net_value = await self.fetcher.get_fund_net_value(codes)
+        day = arrow.get("2021-10-26").date()
+        fund_net_value = await self.fetcher.get_fund_net_value(codes, day=day)
         self.assertTrue(len(fund_net_value))
 
     async def test_get_query_count(self):
