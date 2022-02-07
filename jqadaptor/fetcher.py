@@ -246,7 +246,7 @@ class Fetcher(QuotesFetcher):
             logger.warning("not connected")
             return None
 
-        types = ["stock", "fund", "index", "futures", "etf", "lof"]
+        types = ["stock", "fund", "index", "etf", "lof"]
         securities = jq.get_all_securities(types)
         securities.insert(0, "code", securities.index)
 
