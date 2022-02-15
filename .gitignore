@@ -106,3 +106,4 @@ ENV/
 .eggs
 .emtpy
 .idea
+.history/

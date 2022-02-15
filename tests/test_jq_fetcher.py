@@ -4,6 +4,7 @@ import logging
 import os
 import unittest
 from unittest import mock
+import numpy as np
 
 import arrow
 
@@ -92,7 +93,7 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         end = arrow.get("2020-04-04").date()
         frame_type = "1d"
 
-        with mock.patch("jqdatasdk.get_bars", side_effect=[[]]):
+        with mock.patch("jqdatasdk.get_bars", side_effect=[np.array([])]):
             bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
             self.assertEqual(0, len(bars))
 
@@ -192,36 +193,36 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             bars["600000.XSHG"]["frame"][0], arrow.get("2020-10-19").date()
         )
 
-    async def test_get_high_limit_price(self):
+    async def test_get_trade_price_limits(self):
         secs = ["000001.XSHE"]
         end_at = arrow.get("2020-10-23").date()
-        bars = await self.fetcher.get_high_limit_price(
+        bars = await self.fetcher.get_trade_price_limits(
             secs,
             dt=end_at,
         )
         self.assertIsNotNone(bars)
         try:
-            await self.fetcher.get_high_limit_price(123, dt=end_at)
+            await self.fetcher.get_trade_price_limits(123, dt=end_at)
         except Exception as e:
             self.assertIsInstance(e, TypeError)
 
         try:
-            await self.fetcher.get_high_limit_price(secs, dt=123)
+            await self.fetcher.get_trade_price_limits(secs, dt=123)
         except Exception as e:
             self.assertIsInstance(e, TypeError)
 
         try:
-            await self.fetcher.get_high_limit_price(secs, dt=end_at)
+            await self.fetcher.get_trade_price_limits(secs, dt=end_at)
         except Exception as e:
             self.assertIsInstance(e, TypeError)
 
         try:
-            await self.fetcher.get_high_limit_price(secs, dt=end_at)
+            await self.fetcher.get_trade_price_limits(secs, dt=end_at)
         except Exception as e:
             self.assertIsInstance(e, ValueError)
 
         try:
-            await self.fetcher.get_high_limit_price(secs, dt=end_at)
+            await self.fetcher.get_trade_price_limits(secs, dt=end_at)
         except Exception as e:
             self.assertIsInstance(e, TypeError)
 
@@ -258,6 +259,8 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         fund_net_value = await self.fetcher.get_fund_net_value(codes, day=day)
         self.assertTrue(len(fund_net_value))
 
-    async def test_get_query_count(self):
-        query_count = await self.fetcher.get_query_count()
-        self.assertIsInstance(query_count, dict)
+    async def test_get_quota(self):
+        quota = await self.fetcher.get_quota()
+        self.assertIsInstance(quota, dict)
+        self.assertIn("total", quota)
+        self.assertIn("spare", quota)

@@ -10,14 +10,14 @@ import datetime
 import functools
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple, Union
+from typing import List, Tuple, Union, Dict
 
 import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
-from coretypes import QuotesFetcher, stock_bars_dtype
+from coretypes import QuotesFetcher,bars_dtype
 from numpy.typing import ArrayLike
 from pandas.core.frame import DataFrame
 from sqlalchemy import func
@@ -111,7 +111,7 @@ class Fetcher(QuotesFetcher):
         n_bars: int,
         frame_type: str,
         include_unclosed=True,
-    ) -> np.array:
+    ) -> Dict[str, np.ndarray]:
         if not self.connected:
             logger.warning("not connected.")
             return None
@@ -144,10 +144,7 @@ class Fetcher(QuotesFetcher):
         )
         results = {}
         for code, bars in resp.items():
-            bars = np.array(
-                bars,
-                dtype=stock_bars_dtype,
-            )
+            bars = bars.astype(bars_dtype)
 
             if frame_type in minute_level_frames:
                 bars["frame"] = [
@@ -166,7 +163,7 @@ class Fetcher(QuotesFetcher):
         n_bars: int,
         frame_type: str,
         include_unclosed=True,
-    ) -> np.array:
+    ) -> np.ndarray:
         """
         fetch quotes for security (code), and convert it to a numpy array
         consists of:
@@ -212,10 +209,7 @@ class Fetcher(QuotesFetcher):
                 include_now=include_unclosed,
             )
             # convert to omega supported format
-            bars = np.array(
-                bars,
-                dtype=stock_bars_dtype,
-            )
+            bars = bars.astype(bars_dtype)
             if len(bars) == 0:
                 logger.warning(
                     "fetching %s(%s,%s) returns empty result", sec, n_bars, end_at
@@ -260,14 +254,14 @@ class Fetcher(QuotesFetcher):
         return securities.values
 
     @async_concurrent(executor)
-    def get_all_trade_days(self) -> np.array:
+    def get_all_trade_days(self) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
             return None
 
         return jq.get_all_trade_days()
 
-    def _to_numpy(self, df: pd.DataFrame) -> np.array:
+    def _to_numpy(self, df: pd.DataFrame) -> np.ndarray:
         df["date"] = pd.to_datetime(df["day"]).dt.date
 
         # translate joinquant definition to zillionare definition
@@ -301,7 +295,7 @@ class Fetcher(QuotesFetcher):
     @async_concurrent(executor)
     def get_valuation(
         self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
-    ) -> np.array:
+    ) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
             return None
@@ -371,9 +365,10 @@ class Fetcher(QuotesFetcher):
         return np.array(np.rec.fromrecords(v.values), dtype=dtypes)
 
     @async_concurrent(executor)
-    def get_high_limit_price(
+    def get_trade_price_limits(
         self, sec: Union[List, str], dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
+        """获取某个时间点的交易价格限制，即涨停价和跌停价"""
         if type(dt) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
                 "end_at must by type of datetime.date or datetime.datetime or str"
@@ -603,7 +598,7 @@ class Fetcher(QuotesFetcher):
             df = df.groupby(by="code").apply(lambda x: x.nlargest(10, "shares"))
         return self._to_fund_portfolio_stock_numpy(df)
 
-    def _to_fund_net_value_numpy(self, df: pd.DataFrame) -> np.array:
+    def _to_fund_net_value_numpy(self, df: pd.DataFrame) -> np.ndarray:
         df["day"] = pd.to_datetime(df["day"]).dt.date
 
         fields = {
@@ -628,7 +623,7 @@ class Fetcher(QuotesFetcher):
         self,
         codes: Union[str, List[str]],
         day: datetime.date = None,
-    ) -> np.array:
+    ) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
             return None
@@ -670,7 +665,7 @@ class Fetcher(QuotesFetcher):
         )
         return self._to_fund_net_value_numpy(df)
 
-    def _to_fund_share_daily_numpy(self, df: pd.DataFrame) -> np.array:
+    def _to_fund_share_daily_numpy(self, df: pd.DataFrame) -> np.ndarray:
         df["day"] = pd.to_datetime(df["pub_date"]).dt.date
 
         fields = {
@@ -690,7 +685,7 @@ class Fetcher(QuotesFetcher):
     @async_concurrent(executor)
     def get_fund_share_daily(
         self, codes: Union[str, List[str]] = None, day: datetime.date = None
-    ) -> np.array:
+    ) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
             return None
@@ -711,15 +706,9 @@ class Fetcher(QuotesFetcher):
         df["total_tna"] = df["total_tna"].fillna(0)
         return self._to_fund_share_daily_numpy(df)
 
-    @async_concurrent(executor)
-    def get_query_count(self):
-        """
-        查询当日剩余可调用数据条数
-        """
-        return jq.get_query_count()
 
     @async_concurrent(executor)
-    def get_quota(self) -> dict:
+    def get_quota(self) -> Dict[str,int]:
         """查询quota使用情况
 
         返回值为一个dict, key为"total"，"spare"
@@ -763,3 +752,9 @@ class Fetcher(QuotesFetcher):
     def reconnect(cls):
         cls.logout()
         cls.login(cls.account, cls.password)
+
+    @classmethod
+    def get_batch_operation_limit(cls, op)->int:
+        """获取每次批量操作的限制"""
+        return {
+        }.get(op, 3000)
