@@ -10,14 +10,14 @@ import datetime
 import functools
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import List, Tuple, Union, Dict
+from typing import Dict, List, Tuple, Union
 
 import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
-from coretypes import QuotesFetcher,bars_dtype
+from coretypes import QuotesFetcher, bars_dtype
 from numpy.typing import ArrayLike
 from pandas.core.frame import DataFrame
 from sqlalchemy import func
@@ -754,7 +754,7 @@ class Fetcher(QuotesFetcher):
         cls.login(cls.account, cls.password)
 
     @classmethod
-    def get_batch_operation_limit(cls, op)->int:
-        """获取每次批量操作的限制"""
+    def result_size_limit(cls, op)->int:
+        """单次查询允许返回的最大记录数"""
         return {
         }.get(op, 3000)

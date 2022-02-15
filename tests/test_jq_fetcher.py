@@ -264,3 +264,6 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertIsInstance(quota, dict)
         self.assertIn("total", quota)
         self.assertIn("spare", quota)
+
+    def test_result_size_limit(self):
+        self.assertEqual(self.fetcher.result_size_limit("bars"), 3000)
