@@ -5,6 +5,7 @@ import os
 import unittest
 from unittest import mock
 import numpy as np
+import datetime
 
 import arrow
 
@@ -201,6 +202,9 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             dt=end_at,
         )
         self.assertIsNotNone(bars)
+        self.assertEqual(datetime.date(2020, 10, 23), bars["frame"][0])
+        self.assertAlmostEqual(19.32, bars["high_limit"][0], places=2)
+        self.assertAlmostEqual(15.8, bars["low_limit"][0], places=2)
         try:
             await self.fetcher.get_trade_price_limits(123, dt=end_at)
         except Exception as e:

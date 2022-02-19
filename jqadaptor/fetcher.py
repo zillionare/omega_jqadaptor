@@ -368,7 +368,14 @@ class Fetcher(QuotesFetcher):
     def get_trade_price_limits(
         self, sec: Union[List, str], dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
-        """获取某个时间点的交易价格限制，即涨停价和跌停价"""
+        """获取某个时间点的交易价格限制，即涨停价和跌停价
+        
+        Returns:
+            an numpy structured array which dtype is:
+            [('frame', 'O'), ('code', 'O'), ('high_limit', '<f4'), ('low_limit', '<f4')]
+
+            the frame is python datetime.date object
+        """
         if type(dt) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
                 "end_at must by type of datetime.date or datetime.datetime or str"
@@ -387,14 +394,13 @@ class Fetcher(QuotesFetcher):
             "count": 1,
             "skip_paused": True
         }
-        bars = jq.get_price(**params)
+        df = jq.get_price(**params)
 
-        if len(bars) == 0:
+        dtype = [('frame', 'O'), ('code', 'O'), ('high_limit', '<f4'), ('low_limit', '<f4')]
+        if len(df) == 0:
             return None
-        bars = self.__dataframe_to_structured_array(
-            bars,
-            [(_name, _type) for _name, _type in zip(bars.dtypes.index, bars.dtypes)],
-        )
+        bars = df.to_records(index=False).astype(dtype)
+        bars["frame"] = df["time"].apply(lambda x: x.to_pydatetime().date())
         return bars
 
     def _to_fund_numpy(self, df: pd.DataFrame) -> np.array:
