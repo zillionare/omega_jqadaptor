@@ -86,7 +86,7 @@ class Fetcher(QuotesFetcher):
     @classmethod
     @async_concurrent(executor)
     def create_instance(
-        cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
+            cls, account: str, password: str, **kwargs
     ):
         """
         创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
@@ -99,18 +99,16 @@ class Fetcher(QuotesFetcher):
 
         """
 
-        cls.tz = dateutil.tz.gettz(tz)
-
         cls.login(account, password, **kwargs)
 
     @async_concurrent(executor)
     def get_bars_batch(
-        self,
-        secs: List[str],
-        end_at: datetime.datetime,
-        n_bars: int,
-        frame_type: str,
-        include_unclosed=True,
+            self,
+            secs: List[str],
+            end_at: datetime.datetime,
+            n_bars: int,
+            frame_type: str,
+            include_unclosed=True,
     ) -> Dict[str, np.ndarray]:
         if not self.connected:
             logger.warning("not connected.")
@@ -145,24 +143,18 @@ class Fetcher(QuotesFetcher):
         results = {}
         for code, bars in resp.items():
             bars = bars.astype(bars_dtype)
-
-            if frame_type in minute_level_frames:
-                bars["frame"] = [
-                    frame.replace(tzinfo=self.tz) for frame in bars["frame"]
-                ]
-
             results[code] = bars
 
         return results
 
     @async_concurrent(executor)
     def get_bars(
-        self,
-        sec: str,
-        end_at: Union[datetime.date, datetime.datetime],
-        n_bars: int,
-        frame_type: str,
-        include_unclosed=True,
+            self,
+            sec: str,
+            end_at: Union[datetime.date, datetime.datetime],
+            n_bars: int,
+            frame_type: str,
+            include_unclosed=True,
     ) -> np.ndarray:
         """
         fetch quotes for security (code), and convert it to a numpy array
@@ -215,11 +207,6 @@ class Fetcher(QuotesFetcher):
                     "fetching %s(%s,%s) returns empty result", sec, n_bars, end_at
                 )
                 return bars
-
-            if frame_type in minute_level_frames:
-                bars["frame"] = [
-                    frame.replace(tzinfo=self.tz) for frame in bars["frame"]
-                ]
 
             return bars
         except Exception as e:  # pylint: disable=broad-except
@@ -294,7 +281,7 @@ class Fetcher(QuotesFetcher):
 
     @async_concurrent(executor)
     def get_valuation(
-        self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
+            self, codes: Union[str, List[str]], day: datetime.date, n: int = 1
     ) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
@@ -327,7 +314,7 @@ class Fetcher(QuotesFetcher):
 
     @staticmethod
     def __dataframe_to_structured_array(
-        df: pd.DataFrame, dtypes: List[Tuple] = None
+            df: pd.DataFrame, dtypes: List[Tuple] = None
     ) -> ArrayLike:
         """convert dataframe (with all columns, and index possibly) to numpy structured arrays
 
@@ -366,7 +353,7 @@ class Fetcher(QuotesFetcher):
 
     @async_concurrent(executor)
     def get_trade_price_limits(
-        self, sec: Union[List, str], dt: Union[str, datetime.datetime, datetime.date]
+            self, sec: Union[List, str], dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
         """获取某个时间点的交易价格限制，即涨停价和跌停价
         
@@ -511,7 +498,7 @@ class Fetcher(QuotesFetcher):
 
     @async_concurrent(executor)
     def get_fund_portfolio_stock(
-        self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
+            self, codes: Union[str, List[str]], pub_date: Union[str, datetime.date] = None
     ) -> np.array:
         if not self.connected:
             logger.warning("not connected")
@@ -563,11 +550,11 @@ class Fetcher(QuotesFetcher):
         )
         df["deadline"] = df["pub_date"].map(
             lambda x: (
-                x
-                + pd.tseries.offsets.DateOffset(
-                    months=-((x.month - 1) % 3), days=1 - x.day
-                )
-                - datetime.timedelta(days=1)
+                    x
+                    + pd.tseries.offsets.DateOffset(
+                months=-((x.month - 1) % 3), days=1 - x.day
+            )
+                    - datetime.timedelta(days=1)
             ).date()
         )
         df = df.sort_values(
@@ -626,9 +613,9 @@ class Fetcher(QuotesFetcher):
 
     @async_concurrent(executor)
     def get_fund_net_value(
-        self,
-        codes: Union[str, List[str]],
-        day: datetime.date = None,
+            self,
+            codes: Union[str, List[str]],
+            day: datetime.date = None,
     ) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
@@ -690,7 +677,7 @@ class Fetcher(QuotesFetcher):
 
     @async_concurrent(executor)
     def get_fund_share_daily(
-        self, codes: Union[str, List[str]] = None, day: datetime.date = None
+            self, codes: Union[str, List[str]] = None, day: datetime.date = None
     ) -> np.ndarray:
         if not self.connected:
             logger.warning("not connected")
@@ -712,9 +699,8 @@ class Fetcher(QuotesFetcher):
         df["total_tna"] = df["total_tna"].fillna(0)
         return self._to_fund_share_daily_numpy(df)
 
-
     @async_concurrent(executor)
-    def get_quota(self) -> Dict[str,int]:
+    def get_quota(self) -> Dict[str, int]:
         """查询quota使用情况
 
         返回值为一个dict, key为"total"，"spare"
@@ -760,7 +746,7 @@ class Fetcher(QuotesFetcher):
         cls.login(cls.account, cls.password)
 
     @classmethod
-    def result_size_limit(cls, op)->int:
+    def result_size_limit(cls, op) -> int:
         """单次查询允许返回的最大记录数"""
         return {
         }.get(op, 3000)
