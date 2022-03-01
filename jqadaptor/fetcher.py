@@ -6,13 +6,13 @@ __version__ = "0.1.1"
 
 # -*- coding: utf-8 -*-
 import asyncio
+import copy
 import datetime
 import functools
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Tuple, Union
 
-import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
@@ -215,6 +215,62 @@ class Fetcher(QuotesFetcher):
                 raise FetcherQuotaError("Exceeded JQDataSDK Quota") from e
             else:
                 raise e
+
+    @async_concurrent(executor)
+    def get_price(
+            self,
+            sec: Union[List, str],
+            end_date: Union[str, datetime.datetime],
+            n_bars: int,
+            frame_type: str
+    ) -> Dict[str, np.ndarray]:
+        if type(end_date) not in (str, datetime.date, datetime.datetime):
+            raise TypeError(
+                "end_at must by type of datetime.date or datetime.datetime or str"
+            )
+        if type(sec) not in (list, str):
+            raise TypeError("sec must by type of list or str")
+        fields = [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "money",
+            "factor",
+        ]
+        params = {
+            "security": sec,
+            "end_date": end_date,
+            "fields": fields,
+            "fq": None,
+            "fill_paused": False,
+            "frequency": frame_type,
+            "count": n_bars,
+            "skip_paused": True
+        }
+        df = jq.get_price(**params)
+        # 处理时间 转换成datetime
+        temp_bars_dtype = copy.deepcopy(bars_dtype)
+        temp_bars_dtype.insert(1, ("code", "O"))
+        ret = {}
+        for code, group in df.groupby("code"):
+            df = group[[
+                "time",  # python object either of Frame type
+                "code",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "money",
+                "factor",
+            ]].sort_values("time")
+            bars = df.to_records(index=False).astype(temp_bars_dtype)
+            bars["frame"] = [x.to_pydatetime() for x in df["time"]]
+            ret[code] = bars.view(np.ndarray)
+
+        return ret
 
     @async_concurrent(executor)
     def get_security_list(self) -> np.ndarray:

@@ -63,8 +63,8 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         frame_type = "30m"
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
         if (
-            bars[0]["frame"]
-            != arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime
+                bars[0]["frame"]
+                != arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime
         ):
             print(bars[0]["frame"])
             print(arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime)
@@ -271,3 +271,34 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
 
     def test_result_size_limit(self):
         self.assertEqual(self.fetcher.result_size_limit("bars"), 3000)
+
+    async def test_get_price(self):
+        price_bars = await self.fetcher.get_price(["605366.XSHG"], end_date=datetime.datetime(2022, 3, 1, 13, 16),
+                                                  n_bars=2, frame_type="1m")
+        bars = await self.fetcher.get_bars_batch(["605366.XSHG"], end_at=datetime.datetime(2022, 3, 1, 13, 16),
+                                                 n_bars=2, frame_type="1m")
+
+        for code in price_bars:
+            bar1 = price_bars[code]
+            bar2 = bars[code]
+            self.assertEqual(len(bar1), len(bar2))
+            if len(bar1) != len(bar2):
+                print("长度不相等，错误")
+                break
+            for item1, item2 in zip(bar1, bar2):
+                # 判断字段是否相等
+                for field in ["frame", 'open', 'high', 'low', 'close',
+                              'volume', 'amount']:
+                    self.assertEqual(item1[field], item2[field])
+                    if item1[field] != item2[field]:
+                        print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
+                        break
+                else:
+                    continue
+                break
+            else:
+                continue
+            break
+
+        print(bars)
+        print(price_bars)
