@@ -275,9 +275,12 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
     async def test_get_price(self):
         price_bars = await self.fetcher.get_price(["605366.XSHG"], end_date=datetime.datetime(2022, 3, 1, 13, 16),
                                                   n_bars=2, frame_type="1m")
-        bars = await self.fetcher.get_bars_batch(["605366.XSHG"], end_at=datetime.datetime(2022, 3, 1, 13, 16),
+        bars = await self.fetcher.get_bars_batch(["605366.XSHG"], end_at=datetime.datetime(2022, 3, 1,  13, 16),
                                                  n_bars=2, frame_type="1m")
-
+        for i in bars:
+            if not len(bars[i]):
+                print(f"code:{i}为空")
+        print(bars)
         for code in price_bars:
             bar1 = price_bars[code]
             bar2 = bars[code]
@@ -290,7 +293,11 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
                 for field in ["frame", 'open', 'high', 'low', 'close',
                               'volume', 'amount']:
                     self.assertEqual(item1[field], item2[field])
-                    if item1[field] != item2[field]:
+                    if field == "frame":
+                        if item1[field].strftime("%Y-%m-%d") != item2[field].strftime("%Y-%m-%d"):
+                            print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
+                            break
+                    elif item1[field] != item2[field]:
                         print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
                         break
                 else:
