@@ -45,6 +45,8 @@ class FetcherQuotaError(BaseException):
 
     pass
 
+class AccountExpiredError(BaseException):
+    pass
 
 def singleton(cls):
     """Make a class a Singleton class
@@ -226,6 +228,9 @@ class Fetcher(QuotesFetcher):
             logger.exception(e)
             if str(e).find("最大查询限制") != -1:
                 raise FetcherQuotaError("Exceeded JQDataSDK Quota") from e
+            elif str(e).find("账号过期") != -1:
+                logger.warning("account %s expired, please contact jqdata", self.account)
+                raise AccountExpiredError(f"Account {self.account} expired") from e
             else:
                 raise e
 

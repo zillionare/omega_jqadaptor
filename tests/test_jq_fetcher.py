@@ -10,7 +10,7 @@ import datetime
 import arrow
 
 import jqadaptor
-from jqadaptor.fetcher import FetcherQuotaError
+from jqadaptor.fetcher import FetcherQuotaError, AccountExpiredError
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -94,16 +94,13 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         end = arrow.get("2020-04-04").date()
         frame_type = "1d"
 
-        with mock.patch("jqdatasdk.get_bars", side_effect=[np.array([])]):
-            bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
-            self.assertEqual(0, len(bars))
-
         with mock.patch("jqdatasdk.get_bars", side_effect=Exception("最大查询限制")):
-            try:
-                bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
-                self.assertTrue(False, "Expected FetcherQuotaError, got None")
-            except FetcherQuotaError:
-                self.assertTrue(True, "FetcherQuotaError throwed as expected")
+            with self.assertRaises(FetcherQuotaError):
+                await self.fetcher.get_bars(sec, end, 3, frame_type)
+
+        with mock.patch("jqdatasdk.get_bars", side_effect=Exception("账号过期")):
+            with self.assertRaises(AccountExpiredError):
+                await self.fetcher.get_bars(sec, end, 3, frame_type)
 
     async def test_get_bars_not_in_trade(self):
         sec = "600891.XSHG"
