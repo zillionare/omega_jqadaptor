@@ -46,6 +46,6 @@ setup(
     packages=find_packages(include=["jqadaptor", "jqadaptor.*"]),
     setup_requires=setup_requirements,
     url="https://github.com/zillionare/omega_jqadaptor",
-    version="1.0.12",
+    version="1.0.14",
     zip_safe=False,
 )

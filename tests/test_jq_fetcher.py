@@ -59,19 +59,13 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(bars[0]["frame"], arrow.get("2020-4-1").date())
         self.assertEqual(bars[-1]["frame"], end)
 
-        end = arrow.get("2020-04-03 10:30:00", tzinfo="Asia/Shanghai").datetime
+        end = arrow.get("2020-04-03 10:30:00").naive
         frame_type = "30m"
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
-        if (
-            bars[0]["frame"]
-            != arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime
-        ):
-            print(bars[0]["frame"])
-            print(arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime)
 
         self.assertEqual(
             bars[0]["frame"],
-            arrow.get("2020-04-02 15:00:00", tzinfo="Asia/Shanghai").datetime,
+            arrow.get("2020-04-02 15:00:00").naive,
         )
         self.assertEqual(bars[-1]["frame"], end)
 
@@ -118,41 +112,31 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
 
         # 600721, ST百花， 2020-4-29停牌一天
         sec = "600721.XSHG"
-        end = arrow.get("2020-04-30 10:30", tzinfo="Asia/Chongqing").datetime
+        end = arrow.get("2020-04-30 10:30").naive
         frame_type = "60m"
 
         bars = await self.fetcher.get_bars(sec, end, 6, frame_type)
         print(bars)
         self.assertEqual(6, len(bars))
         self.assertEqual(
-            arrow.get("2020-04-27 15:00", tzinfo="Asia/Shanghai").datetime,
+            arrow.get("2020-04-27 15:00").naive,
             bars["frame"][0],
         )
         # 检查是否停牌日被跳过
-        self.assertEqual(
-            arrow.get("2020-4-28 15:00", tzinfo="Asia/Shanghai"), bars["frame"][-2]
-        )
-        self.assertEqual(
-            arrow.get("2020-04-30 10:30", tzinfo="Asia/Shanghai"), bars["frame"][-1]
-        )
+        self.assertEqual(arrow.get("2020-4-28 15:00").naive, bars["frame"][-2])
+        self.assertEqual(arrow.get("2020-04-30 10:30").naive, bars["frame"][-1])
         self.assertAlmostEqual(5.47, bars["open"][0], places=2)
         self.assertAlmostEqual(5.26, bars["open"][-1], places=2)
 
         # 测试分钟级别未结束的frame能否获取
-        end = arrow.get("2020-04-30 10:32", tzinfo="Asia/Shanghai").datetime
+        end = arrow.get("2020-04-30 10:32").naive
         bars = await self.fetcher.get_bars(sec, end, 7, "60m")
         print(bars)
 
         self.assertEqual(7, len(bars))
-        self.assertEqual(
-            arrow.get("2020-04-27 15:00", tzinfo="Asia/Shanghai"), bars["frame"][0]
-        )
-        self.assertEqual(
-            arrow.get("2020-4-30 10:32", tzinfo="Asia/Shanghai"), bars["frame"][-1]
-        )
-        self.assertEqual(
-            arrow.get("2020-04-30 10:30", tzinfo="Asia/Shanghai"), bars["frame"][-2]
-        )
+        self.assertEqual(arrow.get("2020-04-27 15:00").naive, bars["frame"][0])
+        self.assertEqual(arrow.get("2020-4-30 10:32").naive, bars["frame"][-1])
+        self.assertEqual(arrow.get("2020-04-30 10:30").naive, bars["frame"][-2])
 
         self.assertAlmostEqual(5.47, bars["open"][0], places=2)
         self.assertAlmostEqual(5.26, bars["open"][-2], places=2)
@@ -268,3 +252,59 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
 
     def test_result_size_limit(self):
         self.assertEqual(self.fetcher.result_size_limit("bars"), 3000)
+
+    async def test_get_price(self):
+        price_bars = await self.fetcher.get_price(
+            ["605366.XSHG"],
+            end_date=datetime.datetime(2022, 3, 1, 13, 16),
+            n_bars=2,
+            frame_type="1m",
+        )
+        bars = await self.fetcher.get_bars_batch(
+            ["605366.XSHG"],
+            end_at=datetime.datetime(2022, 3, 1, 13, 16),
+            n_bars=2,
+            frame_type="1m",
+        )
+        for i in bars:
+            if not len(bars[i]):
+                print(f"code:{i}为空")
+        print(bars)
+        for code in price_bars:
+            bar1 = price_bars[code]
+            bar2 = bars[code]
+            self.assertEqual(len(bar1), len(bar2))
+            if len(bar1) != len(bar2):
+                print("长度不相等，错误")
+                break
+            for item1, item2 in zip(bar1, bar2):
+                # 判断字段是否相等
+                for field in [
+                    "frame",
+                    "open",
+                    "high",
+                    "low",
+                    "close",
+                    "volume",
+                    "amount",
+                ]:
+                    self.assertEqual(item1[field], item2[field])
+                    if field == "frame":
+                        if item1[field].strftime("%Y-%m-%d") != item2[field].strftime(
+                            "%Y-%m-%d"
+                        ):
+                            print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
+                            break
+                    elif item1[field] != item2[field]:
+                        print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
+                        break
+                else:
+                    continue
+                break
+            else:
+                continue
+            break
+
+        # fixme: 这里应该是判断结果是否符合预期，不能用打印来替代。如果actual != expected，需要让测试失败
+        print(bars)
+        print(price_bars)

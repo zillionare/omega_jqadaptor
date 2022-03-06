@@ -6,13 +6,13 @@ __version__ = "0.1.1"
 
 # -*- coding: utf-8 -*-
 import asyncio
+import copy
 import datetime
 import functools
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Tuple, Union
 
-import dateutil
 import jqdatasdk as jq
 import numpy as np
 import pandas as pd
@@ -33,7 +33,21 @@ def async_concurrent(executors):
         async def wrapper(*args, **kwargs):
             p = functools.partial(f, *args, **kwargs)
             loop = asyncio.get_running_loop()
-            return await loop.run_in_executor(executors, p)
+            try:
+                return await loop.run_in_executor(executors, p)
+            except Exception as e:  # pylint: disable=broad-except
+                logger.exception(e)
+                if str(e).find("最大查询限制") != -1:
+                    raise FetcherQuotaError("Exceeded JQDataSDK Quota") from e
+                elif str(e).find("账号过期") != -1:
+                    logger.warning(
+                        "account %s expired, please contact jqdata", Fetcher.account
+                    )
+                    raise AccountExpiredError(
+                        f"Account {Fetcher.account} expired"
+                    ) from e
+                else:
+                    raise e
 
         return wrapper
 
@@ -45,8 +59,10 @@ class FetcherQuotaError(BaseException):
 
     pass
 
+
 class AccountExpiredError(BaseException):
     pass
+
 
 def singleton(cls):
     """Make a class a Singleton class
@@ -87,9 +103,7 @@ class Fetcher(QuotesFetcher):
 
     @classmethod
     @async_concurrent(executor)
-    def create_instance(
-        cls, account: str, password: str, tz: str = "Asia/Shanghai", **kwargs
-    ):
+    def create_instance(cls, account: str, password: str, **kwargs):
         """
         创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
         Args:
@@ -100,8 +114,6 @@ class Fetcher(QuotesFetcher):
         Returns:
 
         """
-
-        cls.tz = dateutil.tz.gettz(tz)
 
         cls.login(account, password, **kwargs)
 
@@ -147,12 +159,6 @@ class Fetcher(QuotesFetcher):
         results = {}
         for code, bars in resp.items():
             bars = bars.astype(bars_dtype)
-
-            if frame_type in minute_level_frames:
-                bars["frame"] = [
-                    frame.replace(tzinfo=self.tz) for frame in bars["frame"]
-                ]
-
             results[code] = bars
 
         return results
@@ -190,16 +196,79 @@ class Fetcher(QuotesFetcher):
 
         if type(end_at) is datetime.date:  # noqa
             end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
-        try:
-            bars = jq.get_bars(
-                sec,
-                n_bars,
-                unit=frame_type,
-                end_dt=end_at,
-                fq_ref_date=None,
-                df=False,
-                fields=[
-                    "date",
+
+        bars = jq.get_bars(
+            sec,
+            n_bars,
+            unit=frame_type,
+            end_dt=end_at,
+            fq_ref_date=None,
+            df=False,
+            fields=[
+                "date",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "money",
+                "factor",
+            ],
+            include_now=include_unclosed,
+        )
+        # convert to omega supported format
+        bars = bars.astype(bars_dtype)
+        if len(bars) == 0:
+            logger.warning(
+                "fetching %s(%s,%s) returns empty result", sec, n_bars, end_at
+            )
+            return bars
+
+        return bars
+
+    @async_concurrent(executor)
+    def get_price(
+        self,
+        sec: Union[List, str],
+        end_date: Union[str, datetime.datetime],
+        n_bars: int,
+        frame_type: str,
+    ) -> Dict[str, np.ndarray]:
+        if type(end_date) not in (str, datetime.date, datetime.datetime):
+            raise TypeError(
+                "end_at must by type of datetime.date or datetime.datetime or str"
+            )
+        if type(sec) not in (list, str):
+            raise TypeError("sec must by type of list or str")
+        fields = [
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "money",
+            "factor",
+        ]
+        params = {
+            "security": sec,
+            "end_date": end_date,
+            "fields": fields,
+            "fq": None,
+            "fill_paused": False,
+            "frequency": frame_type,
+            "count": n_bars,
+            "skip_paused": True,
+        }
+        df = jq.get_price(**params)
+        # 处理时间 转换成datetime
+        temp_bars_dtype = copy.deepcopy(bars_dtype)
+        temp_bars_dtype.insert(1, ("code", "O"))
+        ret = {}
+        for code, group in df.groupby("code"):
+            df = group[
+                [
+                    "time",  # python object either of Frame type
+                    "code",
                     "open",
                     "high",
                     "low",
@@ -207,32 +276,13 @@ class Fetcher(QuotesFetcher):
                     "volume",
                     "money",
                     "factor",
-                ],
-                include_now=include_unclosed,
-            )
-            # convert to omega supported format
-            bars = bars.astype(bars_dtype)
-            if len(bars) == 0:
-                logger.warning(
-                    "fetching %s(%s,%s) returns empty result", sec, n_bars, end_at
-                )
-                return bars
-
-            if frame_type in minute_level_frames:
-                bars["frame"] = [
-                    frame.replace(tzinfo=self.tz) for frame in bars["frame"]
                 ]
+            ].sort_values("time")
+            bars = df.to_records(index=False).astype(temp_bars_dtype)
+            bars["frame"] = [x.to_pydatetime() for x in df["time"]]
+            ret[code] = bars.view(np.ndarray)
 
-            return bars
-        except Exception as e:  # pylint: disable=broad-except
-            logger.exception(e)
-            if str(e).find("最大查询限制") != -1:
-                raise FetcherQuotaError("Exceeded JQDataSDK Quota") from e
-            elif str(e).find("账号过期") != -1:
-                logger.warning("account %s expired, please contact jqdata", self.account)
-                raise AccountExpiredError(f"Account {self.account} expired") from e
-            else:
-                raise e
+        return ret
 
     @async_concurrent(executor)
     def get_security_list(self) -> np.ndarray:
@@ -374,7 +424,7 @@ class Fetcher(QuotesFetcher):
         self, sec: Union[List, str], dt: Union[str, datetime.datetime, datetime.date]
     ) -> np.ndarray:
         """获取某个时间点的交易价格限制，即涨停价和跌停价
-        
+
         Returns:
             an numpy structured array which dtype is:
             [('frame', 'O'), ('code', 'O'), ('high_limit', '<f4'), ('low_limit', '<f4')]
@@ -397,11 +447,16 @@ class Fetcher(QuotesFetcher):
             "fill_paused": False,
             "frequency": "1d",
             "count": 1,
-            "skip_paused": True
+            "skip_paused": True,
         }
         df = jq.get_price(**params)
 
-        dtype = [('frame', 'O'), ('code', 'O'), ('high_limit', '<f4'), ('low_limit', '<f4')]
+        dtype = [
+            ("frame", "O"),
+            ("code", "O"),
+            ("high_limit", "<f4"),
+            ("low_limit", "<f4"),
+        ]
         if len(df) == 0:
             return None
         bars = df.to_records(index=False).astype(dtype)
@@ -717,9 +772,8 @@ class Fetcher(QuotesFetcher):
         df["total_tna"] = df["total_tna"].fillna(0)
         return self._to_fund_share_daily_numpy(df)
 
-
     @async_concurrent(executor)
-    def get_quota(self) -> Dict[str,int]:
+    def get_quota(self) -> Dict[str, int]:
         """查询quota使用情况
 
         返回值为一个dict, key为"total"，"spare"
@@ -765,7 +819,6 @@ class Fetcher(QuotesFetcher):
         cls.login(cls.account, cls.password)
 
     @classmethod
-    def result_size_limit(cls, op)->int:
+    def result_size_limit(cls, op) -> int:
         """单次查询允许返回的最大记录数"""
-        return {
-        }.get(op, 3000)
+        return {}.get(op, 3000)
