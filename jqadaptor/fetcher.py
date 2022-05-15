@@ -285,7 +285,7 @@ class Fetcher(QuotesFetcher):
         return ret
 
     @async_concurrent(executor)
-    def get_security_list(self) -> np.ndarray:
+    def get_security_list(self, date:datetime.date) -> np.ndarray:
         """
 
         Returns:
@@ -296,7 +296,7 @@ class Fetcher(QuotesFetcher):
             return None
 
         types = ["stock", "fund", "index", "etf", "lof"]
-        securities = jq.get_all_securities(types)
+        securities = jq.get_all_securities(types, date)
         securities.insert(0, "code", securities.index)
 
         # remove client dependency of pandas
