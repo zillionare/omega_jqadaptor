@@ -11,6 +11,7 @@ import datetime
 import functools
 import logging
 from concurrent.futures import ThreadPoolExecutor
+import math
 from typing import Dict, List, Tuple, Union
 
 import jqdatasdk as jq
@@ -283,6 +284,70 @@ class Fetcher(QuotesFetcher):
             ret[code] = bars.view(np.ndarray)
 
         return ret
+
+    @async_concurrent(executor)
+    def get_finance_xr_xd_info(self, dt1:datetime.date, dt2:datetime.date) -> list:
+        """ 上市公司分红送股（除权除息）数据 / 2005至今，8:00更新
+        """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
+        # dt2一般为当天，dt1一般为dt2-366天
+        if dt1 is None or dt2 is None:
+            return None
+
+        q_for_count = jq.query(func.count(jq.finance.STK_XR_XD.id))
+        q_for_count = q_for_count.filter(jq.finance.STK_XR_XD.report_date>=dt1, jq.finance.STK_XR_XD.report_date<=dt2)
+        q = jq.query(jq.finance.STK_XR_XD).filter(jq.finance.STK_XR_XD.report_date>=dt1, jq.finance.STK_XR_XD.report_date<=dt2)
+
+        reports_count = jq.finance.run_query(q_for_count)["count_1"][0]
+
+        page = 0
+        dfs: List[pd.DataFrame] = []
+        while page * 3000 < reports_count:
+            df1 = jq.finance.run_query(q.offset(page * 3000).limit(3000))
+            dfs.append(df1)
+            page += 1
+        if len(dfs) == 0:
+            return None
+        df = pd.concat(dfs)
+
+        reports = []
+        for index, row in df.iterrows():
+            a_xr_date = row['a_xr_date']
+            if a_xr_date is None:  # 还未确定的方案不登记
+                continue            
+
+            code = row['code']
+            # company_name = row['company_name']  # 暂时不存公司名字，没实际意义
+            report_date = row['report_date']
+            board_plan_bonusnote = row['board_plan_bonusnote']
+            implementation_bonusnote = row['implementation_bonusnote']  # 有实施才有公告
+
+            bonus_cancel_pub_date = row['bonus_cancel_pub_date']
+            if bonus_cancel_pub_date is None:  # 如果不是2099.1.1，即发生了取消事件
+                bonus_cancel_pub_date = datetime.date(2099, 1, 1)
+
+            bonus_ratio_rmb = row['bonus_ratio_rmb']
+            if bonus_ratio_rmb is None or math.isnan(bonus_ratio_rmb):
+                bonus_ratio_rmb = 0.0
+            dividend_ratio = row['dividend_ratio']
+            if dividend_ratio is None or math.isnan(dividend_ratio):
+                dividend_ratio = 0.0
+            transfer_ratio = row['transfer_ratio']
+            if transfer_ratio is None or math.isnan(transfer_ratio):
+                transfer_ratio = 0.0            
+            at_bonus_ratio_rmb = row['at_bonus_ratio_rmb']
+            if at_bonus_ratio_rmb is None or math.isnan(at_bonus_ratio_rmb):
+                at_bonus_ratio_rmb = 0.0            
+            plan_progress = row['plan_progress']
+
+            record = (code, a_xr_date, board_plan_bonusnote, bonus_ratio_rmb, dividend_ratio, transfer_ratio, 
+                at_bonus_ratio_rmb, report_date, plan_progress, implementation_bonusnote, bonus_cancel_pub_date)
+            reports.append(record)
+            
+        return reports
 
     @async_concurrent(executor)
     def get_security_list(self, date:datetime.date) -> np.ndarray:
