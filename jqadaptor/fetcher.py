@@ -286,20 +286,23 @@ class Fetcher(QuotesFetcher):
         return ret
 
     @async_concurrent(executor)
-    def get_finance_xr_xd_info(self, dt1:datetime.date, dt2:datetime.date) -> list:
+    def get_finance_xrxd_info(self, dt_start:datetime.date, dt_end:datetime.date) -> list:
         """ 上市公司分红送股（除权除息）数据 / 2005至今，8:00更新
         """
         if not self.connected:
             logger.warning("not connected")
             return None
 
-        # dt2一般为当天，dt1一般为dt2-366天
-        if dt1 is None or dt2 is None:
+        # dt_end一般为当天，dt_start一般为dt_end-366天
+        if dt_start is None or dt_end is None:
             return None
 
         q_for_count = jq.query(func.count(jq.finance.STK_XR_XD.id))
-        q_for_count = q_for_count.filter(jq.finance.STK_XR_XD.report_date>=dt1, jq.finance.STK_XR_XD.report_date<=dt2)
-        q = jq.query(jq.finance.STK_XR_XD).filter(jq.finance.STK_XR_XD.report_date>=dt1, jq.finance.STK_XR_XD.report_date<=dt2)
+        q_for_count = q_for_count.filter(jq.finance.STK_XR_XD.a_xr_date.isnot(None),
+                    jq.finance.STK_XR_XD.report_date>=dt_start, jq.finance.STK_XR_XD.report_date<=dt_end)
+
+        q = jq.query(jq.finance.STK_XR_XD).filter(jq.finance.STK_XR_XD.a_xr_date.isnot(None),
+                    jq.finance.STK_XR_XD.report_date>=dt_start, jq.finance.STK_XR_XD.report_date<=dt_end)
 
         reports_count = jq.finance.run_query(q_for_count)["count_1"][0]
 
