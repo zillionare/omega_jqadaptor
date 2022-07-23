@@ -1,12 +1,12 @@
 # Publish package on release branch if it's tagged with 'v*'
 
-name: release & publish
+name: release & publish on master branch
 
 # Controls when the action will run.
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branch: release
+    branch: master
     tags:
       - 'v*'
 

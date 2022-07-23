@@ -42,7 +42,18 @@ This is a patch just to add releae notes. It's identical to 1.0.1 on binary sens
 * change list
     1. add release notes
 
-# 1.0.3 (2020-3-31)
+# 1.0.3 (2021-3-31)
 * change list
     1. fetcher will not try fetching data after login failed. This is friendly to server.
     2. Fix: after use markdown as readme/history file type, forget correct manifest.in, this cause tox failed.
+
+# 1.0.8
+* change list
+    1. 增加涨跌停查询
+    2. 增加quota查询
+    3. 接口异步化
+
+# 1.1
+* change list
+    1. 增加除权除息信息查询
+    2. 获取证券列表接口get_security_list增加查询日期参数。

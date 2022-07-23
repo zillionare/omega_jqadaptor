@@ -10,8 +10,8 @@ import copy
 import datetime
 import functools
 import logging
-from concurrent.futures import ThreadPoolExecutor
 import math
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List, Tuple, Union
 
 import jqdatasdk as jq
@@ -105,15 +105,14 @@ class Fetcher(QuotesFetcher):
     @classmethod
     @async_concurrent(executor)
     def create_instance(cls, account: str, password: str, **kwargs):
-        """
-        创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
+        """创建jq_adaptor实例。 kwargs用来接受多余但不需要的参数。
+
         Args:
-            account: str
-            password: str
-            tz: str
+            account: 聚宽账号
+            password: 聚宽密码
             kwargs: not required
         Returns:
-
+            None
         """
 
         cls.login(account, password, **kwargs)
@@ -127,6 +126,17 @@ class Fetcher(QuotesFetcher):
         frame_type: str,
         include_unclosed=True,
     ) -> Dict[str, np.ndarray]:
+        """批量获取多只股票的行情数据
+
+        Args:
+            secs: 股票代码列表
+            end_at: 查询的结束时间
+            n_bars: 查询的记录数
+            frame_type: 查询的周期，比如1m, 5m, 15m, 30m, 60m, 1d, 1w, 1M, 1Q, 1Y等
+            include_unclosed: 如果`end_at`没有指向`frame_type`的收盘时间，是否只取截止到上一个已收盘的数据。
+        Returns:
+            字典，其中key为股票代码，值为对应的行情数据，类型为bars_dtype.
+        """
         if not self.connected:
             logger.warning("not connected.")
             return None
@@ -157,12 +167,8 @@ class Fetcher(QuotesFetcher):
             fq_ref_date=end_at,
             df=False,
         )
-        results = {}
-        for code, bars in resp.items():
-            bars = bars.astype(bars_dtype)
-            results[code] = bars
 
-        return results
+        return {code: bars.astype(bars_dtype) for code, bars in resp.items()}
 
     @async_concurrent(executor)
     def get_bars(
@@ -173,18 +179,16 @@ class Fetcher(QuotesFetcher):
         frame_type: str,
         include_unclosed=True,
     ) -> np.ndarray:
-        """
-        fetch quotes for security (code), and convert it to a numpy array
-        consists of:
-        index   date    open    high    low    close  volume money factor
+        """获取`sec`在`end_at`时刻的`n_bars`个`frame_type`的行情数据
 
-        :param sec: security code in format "\\d{6}.{exchange server code}"
-        :param end_at: the end_date of fetched quotes.
-        :param n_bars: how many n_bars need to be fetched
-        :param frame_type:
-        :param include_unclosed: if True, then frame at end_at is included, even if
-        it's not closed. In such case, the frame time will not aligned.
-        :return:
+        Args:
+            sec: 股票代码
+            end_at: 查询的结束时间
+            n_bars: 查询的记录数
+            frame_type: 查询的周期，比如1m, 5m, 15m, 30m, 60m, 1d, 1w, 1M, 1Q, 1Y等
+            include_unclosed: 如果`end_at`没有指向`frame_type`的收盘时间，是否只取截止到上一个已收盘的数据。
+        Returns:
+            行情数据，类型为bars_dtype.
         """
         if not self.connected:
             logger.warning("not connected")
@@ -235,6 +239,16 @@ class Fetcher(QuotesFetcher):
         n_bars: int,
         frame_type: str,
     ) -> Dict[str, np.ndarray]:
+        """获取一支或者多支股票的价格数据
+            一般我们使用`get_bars`来获取股票的行情数据。这个方法用以数据校验。
+        Args:
+            sec: 股票代码或者股票代码列表
+            end_date: 查询的结束时间
+            n_bars: 查询的记录数
+            frame_type: 查询的周期，比如1m, 5m, 15m, 30m, 60m, 1d, 1w, 1M, 1Q, 1Y等
+        Returns:
+            字典，其中key为股票代码，值为对应的行情数据，类型为bars_dtype.
+        """
         if type(end_date) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
                 "end_at must by type of datetime.date or datetime.datetime or str"
@@ -286,8 +300,18 @@ class Fetcher(QuotesFetcher):
         return ret
 
     @async_concurrent(executor)
-    def get_finance_xrxd_info(self, dt_start:datetime.date, dt_end:datetime.date) -> list:
-        """ 上市公司分红送股（除权除息）数据 / 2005至今，8:00更新
+    def get_finance_xrxd_info(
+        self, dt_start: datetime.date, dt_end: datetime.date
+    ) -> list:
+        """上市公司分红送股（除权除息）数据 / 2005至今，8:00更新
+
+        聚宽提供的数据是按季组织的。这里的`dt_start`和`dt_end`是指实际季报/年报的时间，而不是实际除权除息的时间。
+
+        Args:
+            dt_start: 开始日期
+            dt_end: 结束日期
+        Returns:
+            分红送股数据,其每一个元素是一个元组，形如：('002589.XSHE', datetime.date(2022, 7, 22), '10派0.09元(含税)', 0.09, 0.0, 0.0, 0.09, datetime.date(2021, 12, 31), '实施方案', '10派0.09元(含税)', datetime.date(2099, 1, 1))
         """
         if not self.connected:
             logger.warning("not connected")
@@ -298,11 +322,17 @@ class Fetcher(QuotesFetcher):
             return None
 
         q_for_count = jq.query(func.count(jq.finance.STK_XR_XD.id))
-        q_for_count = q_for_count.filter(jq.finance.STK_XR_XD.a_xr_date.isnot(None),
-                    jq.finance.STK_XR_XD.report_date>=dt_start, jq.finance.STK_XR_XD.report_date<=dt_end)
+        q_for_count = q_for_count.filter(
+            jq.finance.STK_XR_XD.a_xr_date.isnot(None),
+            jq.finance.STK_XR_XD.report_date >= dt_start,
+            jq.finance.STK_XR_XD.report_date <= dt_end,
+        )
 
-        q = jq.query(jq.finance.STK_XR_XD).filter(jq.finance.STK_XR_XD.a_xr_date.isnot(None),
-                    jq.finance.STK_XR_XD.report_date>=dt_start, jq.finance.STK_XR_XD.report_date<=dt_end)
+        q = jq.query(jq.finance.STK_XR_XD).filter(
+            jq.finance.STK_XR_XD.a_xr_date.isnot(None),
+            jq.finance.STK_XR_XD.report_date >= dt_start,
+            jq.finance.STK_XR_XD.report_date <= dt_end,
+        )
 
         reports_count = jq.finance.run_query(q_for_count)["count_1"][0]
 
@@ -317,47 +347,60 @@ class Fetcher(QuotesFetcher):
         df = pd.concat(dfs)
 
         reports = []
-        for index, row in df.iterrows():
-            a_xr_date = row['a_xr_date']
+        for _, row in df.iterrows():
+            a_xr_date = row["a_xr_date"]
             if a_xr_date is None:  # 还未确定的方案不登记
-                continue            
+                continue
 
-            code = row['code']
+            code = row["code"]
             # company_name = row['company_name']  # 暂时不存公司名字，没实际意义
-            report_date = row['report_date']
-            board_plan_bonusnote = row['board_plan_bonusnote']
-            implementation_bonusnote = row['implementation_bonusnote']  # 有实施才有公告
+            report_date = row["report_date"]
+            board_plan_bonusnote = row["board_plan_bonusnote"]
+            implementation_bonusnote = row["implementation_bonusnote"]  # 有实施才有公告
 
-            bonus_cancel_pub_date = row['bonus_cancel_pub_date']
+            bonus_cancel_pub_date = row["bonus_cancel_pub_date"]
             if bonus_cancel_pub_date is None:  # 如果不是2099.1.1，即发生了取消事件
                 bonus_cancel_pub_date = datetime.date(2099, 1, 1)
 
-            bonus_ratio_rmb = row['bonus_ratio_rmb']
+            bonus_ratio_rmb = row["bonus_ratio_rmb"]
             if bonus_ratio_rmb is None or math.isnan(bonus_ratio_rmb):
                 bonus_ratio_rmb = 0.0
-            dividend_ratio = row['dividend_ratio']
+            dividend_ratio = row["dividend_ratio"]
             if dividend_ratio is None or math.isnan(dividend_ratio):
                 dividend_ratio = 0.0
-            transfer_ratio = row['transfer_ratio']
+            transfer_ratio = row["transfer_ratio"]
             if transfer_ratio is None or math.isnan(transfer_ratio):
-                transfer_ratio = 0.0            
-            at_bonus_ratio_rmb = row['at_bonus_ratio_rmb']
+                transfer_ratio = 0.0
+            at_bonus_ratio_rmb = row["at_bonus_ratio_rmb"]
             if at_bonus_ratio_rmb is None or math.isnan(at_bonus_ratio_rmb):
-                at_bonus_ratio_rmb = 0.0            
-            plan_progress = row['plan_progress']
+                at_bonus_ratio_rmb = 0.0
+            plan_progress = row["plan_progress"]
 
-            record = (code, a_xr_date, board_plan_bonusnote, bonus_ratio_rmb, dividend_ratio, transfer_ratio, 
-                at_bonus_ratio_rmb, report_date, plan_progress, implementation_bonusnote, bonus_cancel_pub_date)
+            record = (
+                code,
+                a_xr_date,
+                board_plan_bonusnote,
+                bonus_ratio_rmb,
+                dividend_ratio,
+                transfer_ratio,
+                at_bonus_ratio_rmb,
+                report_date,
+                plan_progress,
+                implementation_bonusnote,
+                bonus_cancel_pub_date,
+            )
             reports.append(record)
-            
+
         return reports
 
     @async_concurrent(executor)
-    def get_security_list(self, date:datetime.date) -> np.ndarray:
-        """
+    def get_security_list(self, date: datetime.date = None) -> np.ndarray:
+        """获取`date`日的证券列表
 
+        Args:
+            date: 日期。如果为None，则取当前日期的证券列表
         Returns:
-
+            证券列表, dtype为[('code', 'O'), ('display_name', 'O'), ('name', 'O'), ('start_date', 'O'), ('end_date', 'O'), ('type', 'O')]的structured array
         """
         if not self.connected:
             logger.warning("not connected")
@@ -374,10 +417,15 @@ class Fetcher(QuotesFetcher):
         securities["end_date"] = securities["end_date"].apply(
             lambda s: f"{s.year:04}-{s.month:02}-{s.day:02}"
         )
-        return securities.values
+        return securities.to_records(index=False)
 
     @async_concurrent(executor)
     def get_all_trade_days(self) -> np.ndarray:
+        """获取所有交易日的日历
+
+        Returns:
+            交易日日历, dtype为datetime.date的numpy array
+        """
         if not self.connected:
             logger.warning("not connected")
             return None
@@ -557,9 +605,9 @@ class Fetcher(QuotesFetcher):
 
     @async_concurrent(executor)
     def get_fund_list(self, codes: Union[str, List[str]] = None) -> np.ndarray:
-        """
-        获取所有的基金基本信息
+        """获取所有的基金基本信息
         Args:
+            codes: 可以是一个基金代码，或者是一个列表，如果为空，则获取所有的基金
         Returns:
             np.array: [基金的基本信息]
         """

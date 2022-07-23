@@ -131,7 +131,6 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         # 测试分钟级别未结束的frame能否获取
         end = arrow.get("2020-04-30 10:32").naive
         bars = await self.fetcher.get_bars(sec, end, 7, "60m")
-        print(bars)
 
         self.assertEqual(7, len(bars))
         self.assertEqual(arrow.get("2020-04-27 15:00").naive, bars["frame"][0])
@@ -141,6 +140,11 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(5.47, bars["open"][0], places=2)
         self.assertAlmostEqual(5.26, bars["open"][-2], places=2)
         self.assertAlmostEqual(5.33, bars["open"][-1], places=2)
+
+        # in case jq.get_bars returns empty list, ensure we're ok with logging it
+        with mock.patch('jqdatasdk.get_bars', return_value=np.array([])):
+            bars = await self.fetcher.get_bars(sec, end, 1, "1d")
+            self.assertEqual(0, len(bars))
 
     async def test_get_valuation(self):
         sec = "000001.XSHE"
@@ -308,3 +312,20 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         # fixme: 这里应该是判断结果是否符合预期，不能用打印来替代。如果actual != expected，需要让测试失败
         print(bars)
         print(price_bars)
+
+    async def test_get_finance_xrxd_info(self):
+        start = datetime.date(2021, 6, 17)
+        end = datetime.date(2022, 6, 17)
+        code = "002589.XSHE"
+        info = await self.fetcher.get_finance_xrxd_info(start, end)
+        found = False
+        for item in info:
+            if item[0] == code:
+                self.assertEqual(str(item), "('002589.XSHE', datetime.date(2022, 7, 22), '10派0.09元(含税)', 0.09, 0.0, 0.0, 0.09, datetime.date(2021, 12, 31), '实施方案', '10派0.09元(含税)', datetime.date(2099, 1, 1))")
+                found = True
+
+        self.assertTrue(found)
+
+    async def test_get_all_trade_days(self):
+        days = await self.fetcher.get_all_trade_days()
+        self.assertEqual(days[0], datetime.date(2005, 1, 4))
