@@ -125,6 +125,7 @@ class Fetcher(QuotesFetcher):
         n_bars: int,
         frame_type: str,
         include_unclosed=True,
+        fq_ref_enabled=False,
     ) -> Dict[str, np.ndarray]:
         """批量获取多只股票的行情数据
 
@@ -134,6 +135,7 @@ class Fetcher(QuotesFetcher):
             n_bars: 查询的记录数
             frame_type: 查询的周期，比如1m, 5m, 15m, 30m, 60m, 1d, 1w, 1M, 1Q, 1Y等
             include_unclosed: 如果`end_at`没有指向`frame_type`的收盘时间，是否只取截止到上一个已收盘的数据。
+            fq_ref_enabled: 是否设置fq_ref_date参数, 默认不复权
         Returns:
             字典，其中key为股票代码，值为对应的行情数据，类型为bars_dtype.
         """
@@ -148,6 +150,11 @@ class Fetcher(QuotesFetcher):
         # when check if isinstance(datetime.datetime, datetime.date)
         if type(end_at) is datetime.date:  # pylint: disable=unidiomatic-typecheck
             end_at = datetime.datetime(end_at.year, end_at.month, end_at.day, 15)
+
+        fq_end_at = None
+        if fq_ref_enabled:
+            fq_end_at = end_at
+
         resp = jq.get_bars(
             secs,
             n_bars,
@@ -164,7 +171,7 @@ class Fetcher(QuotesFetcher):
             ],
             end_dt=end_at,
             include_now=include_unclosed,
-            fq_ref_date=end_at,
+            fq_ref_date=fq_end_at,
             df=False,
         )
 
