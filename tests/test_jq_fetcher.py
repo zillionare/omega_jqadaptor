@@ -1,16 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import datetime
 import logging
 import os
 import unittest
 from unittest import mock
-import numpy as np
-import datetime
 
 import arrow
+import numpy as np
 
 import jqadaptor
-from jqadaptor.fetcher import FetcherQuotaError, AccountExpiredError
+from jqadaptor.fetcher import AccountExpiredError, FetcherQuotaError
 
 logger = logging.getLogger(__file__)
 logging.basicConfig(level=logging.INFO)
@@ -51,7 +51,9 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         frame_type = "1d"
         bars = await self.fetcher.get_bars(sec, end, 10, frame_type)
         self.assertEqual(bars[0]["frame"].item().date(), arrow.get("2020-03-23").date())
-        self.assertEqual(bars[-1]["frame"].item().date(), arrow.get("2020-04-03").date())
+        self.assertEqual(
+            bars[-1]["frame"].item().date(), arrow.get("2020-04-03").date()
+        )
 
         end = arrow.get("2020-04-03").date()
         frame_type = "1d"
@@ -106,7 +108,9 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(arrow.get("2020-02-26").date(), bars["frame"][3].item().date())
         self.assertAlmostEqual(1.18, bars["open"][3], places=2)
 
-        self.assertEqual(arrow.get("2020-03-02").date(), bars["frame"][-1].item().date())
+        self.assertEqual(
+            arrow.get("2020-03-02").date(), bars["frame"][-1].item().date()
+        )
         self.assertAlmostEqual(1.13, bars["open"][-1], places=2)
 
         # 600721, ST百花， 2020-4-29停牌一天
@@ -141,7 +145,7 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertAlmostEqual(5.33, bars["open"][-1], places=2)
 
         # in case jq.get_bars returns empty list, ensure we're ok with logging it
-        with mock.patch('jqdatasdk.get_bars', return_value=np.array([])):
+        with mock.patch("jqdatasdk.get_bars", return_value=np.array([])):
             bars = await self.fetcher.get_bars(sec, end, 1, "1d")
             self.assertEqual(0, len(bars))
 
@@ -270,10 +274,15 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             frame_type="1m",
         )
         for code in price_bars:
-            np.testing.assert_array_equal(price_bars[code]["frame"], bars[code]["frame"])
-            np.testing.assert_almost_equal(price_bars[code]["open"], bars[code]["open"], decimal=2)
-            np.testing.assert_almost_equal(price_bars[code]["close"], bars[code]["close"], decimal=2)
-
+            np.testing.assert_array_equal(
+                price_bars[code]["frame"], bars[code]["frame"]
+            )
+            np.testing.assert_almost_equal(
+                price_bars[code]["open"], bars[code]["open"], decimal=2
+            )
+            np.testing.assert_almost_equal(
+                price_bars[code]["close"], bars[code]["close"], decimal=2
+            )
 
     async def test_get_finance_xrxd_info(self):
         start = datetime.date(2021, 6, 17)
@@ -283,7 +292,10 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         found = False
         for item in info:
             if item[0] == code:
-                self.assertEqual(str(item), "('002589.XSHE', datetime.date(2022, 7, 22), '10派0.09元(含税)', 0.09, 0.0, 0.0, 0.09, datetime.date(2021, 12, 31), '实施方案', '10派0.09元(含税)', datetime.date(2099, 1, 1))")
+                self.assertEqual(
+                    str(item),
+                    "('002589.XSHE', datetime.date(2022, 7, 22), '10派0.09元(含税)', 0.09, 0.0, 0.0, 0.09, datetime.date(2021, 12, 31), '实施方案', '10派0.09元(含税)', datetime.date(2099, 1, 1))",
+                )
                 found = True
 
         self.assertTrue(found)
