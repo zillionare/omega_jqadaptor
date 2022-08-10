@@ -1,10 +1,12 @@
 # jqadatpor
 
-<p align="center">
-    <a href="https://pypi.org/project/zillionare-omega-adaptors-jq">
-        <img src="https://img.shields.io/pypi/v/zillionare-omega-adaptors-jq.svg">
-    </a>
-</p>
+[![Version](http://img.shields.io/pypi/v/zillionare-omega-adaptors-jq?color=brightgreen)](https://pypi.python.org/pypi/zillionare-omega-adaptors-jq)
+[![CI Status](https://github.com/zillionare/omega_jqadaptor/actions/workflows/release.yml/badge.svg)](https://github.com/zillionare/omega_jqadaptor)
+[![Code Coverage](https://img.shields.io/codecov/c/github/zillionare/omega_jqadaptor)](https://app.codecov.io/gh/zillionare/omega_jqadaptor)
+[![Downloads](https://pepy.tech/badge/zillionare-omega-adaptors-jq)](https://pepy.tech/project/zillionare-omega-adaptors-jq)
+[![License](https://img.shields.io/badge/License-MIT.svg)](https://opensource.org/licenses/MIT)
+[![Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Linux](https://svgshare.com/i/Zhy.svg)](https://svgshare.com/i/Zhy.svg)
 
 
 
