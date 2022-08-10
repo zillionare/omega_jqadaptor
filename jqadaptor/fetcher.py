@@ -6,7 +6,6 @@ __version__ = "0.1.1"
 
 # -*- coding: utf-8 -*-
 import asyncio
-import copy
 import datetime
 import functools
 import logging
@@ -18,7 +17,7 @@ import jqdatasdk as jq
 import numpy as np
 import pandas as pd
 import pytz
-from coretypes import QuotesFetcher, bars_dtype
+from coretypes import QuotesFetcher, bars_dtype, bars_dtype_with_code
 from numpy.typing import ArrayLike
 from pandas.core.frame import DataFrame
 from sqlalchemy import func
@@ -283,14 +282,12 @@ class Fetcher(QuotesFetcher):
         }
         df = jq.get_price(**params)
         # 处理时间 转换成datetime
-        temp_bars_dtype = copy.deepcopy(bars_dtype)
-        temp_bars_dtype.insert(1, ("code", "O"))
         ret = {}
         for code, group in df.groupby("code"):
-            df = group[
+            df_ = group[
                 [
-                    "time",  # python object either of Frame type
                     "code",
+                    "time",  # python object either of Frame type
                     "open",
                     "high",
                     "low",
@@ -300,9 +297,8 @@ class Fetcher(QuotesFetcher):
                     "factor",
                 ]
             ].sort_values("time")
-            bars = df.to_records(index=False).astype(temp_bars_dtype)
-            bars["frame"] = [x.to_pydatetime() for x in df["time"]]
-            ret[code] = bars.view(np.ndarray)
+            bars = df_.to_records(index=False).astype(bars_dtype_with_code)
+            ret[code] = bars
 
         return ret
 

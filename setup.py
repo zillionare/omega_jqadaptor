@@ -17,7 +17,7 @@ requirements = [
     "SQLAlchemy>=1.3.23,<1.4",
     "pytz>=2019.3",
     "cfg4py>=0.8",
-    "zillionare-core-types>=0.4.0",
+    "zillionare-core-types>=0.5.1",
 ]
 
 setup_requirements = []
@@ -46,6 +46,6 @@ setup(
     packages=find_packages(include=["jqadaptor", "jqadaptor.*"]),
     setup_requires=setup_requirements,
     url="https://github.com/zillionare/omega_jqadaptor",
-    version="1.1.0",
+    version="1.2",
     zip_safe=False,
 )

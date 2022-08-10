@@ -1,27 +1,28 @@
 # History
 
-## 0.1.0 (2020-04-10)
+# 1.2
+* core-types版本升至0.5.1。升级后，行情数据接口返回的数据类型也将相应改变，因此，本更新是破坏性更新。
+# 1.1
+* change list
+    1. 增加除权除息信息查询
+    2. 获取证券列表接口get_security_list增加查询日期参数。
 
-* First release on PyPI.
+# 1.0.8
+* change list
+    1. 增加涨跌停查询
+    2. 增加quota查询
+    3. 接口异步化
 
-## 0.3.2 (2020-12-04)
+# 1.0.3 (2021-3-31)
+* change list
+    1. fetcher will not try fetching data after login failed. This is friendly to server.
+    2. Fix: after use markdown as readme/history file type, forget correct manifest.in, this cause tox failed.
 
-* Alpha release of 0.3
-* Features:
-    1. get_bar
-    2. get_security_list
-    3. get_all_trade_days
-    4. get_bars_batch
-    5. get_valuation
+# 1.0.2 (2021-3-30)
 
-## 1.0.0 (2021-3-29) (yanked)
-
-due to severe bug found (github://#3), please don't use this version
-
-bug fix:
-    1. lock down jqdatasdk, sqlalchemy's version. Recently sqlalchemy's update (to 1.4) cause several incompatible issue.
-    2. remove dependancy of omicron
-    3. fix timezone issue of get_bars/get_bars_batch, see #2
+This is a patch just to add releae notes. It's identical to 1.0.1 on binary sense.
+* change list
+    1. add release notes
 
 # 1.0.1 (2021-3-30)
 
@@ -36,24 +37,38 @@ This is first official release of zillionare-omega-adaptors-jq.
  * bug fixes:
     github: #2, #3
 
-# 1.0.2 (2021-3-30)
+## 1.0.0 (2021-3-29) (yanked)
 
-This is a patch just to add releae notes. It's identical to 1.0.1 on binary sense.
-* change list
-    1. add release notes
+due to severe bug found (github://#3), please don't use this version
 
-# 1.0.3 (2021-3-31)
-* change list
-    1. fetcher will not try fetching data after login failed. This is friendly to server.
-    2. Fix: after use markdown as readme/history file type, forget correct manifest.in, this cause tox failed.
+bug fix:
+    1. lock down jqdatasdk, sqlalchemy's version. Recently sqlalchemy's update (to 1.4) cause several incompatible issue.
+    2. remove dependancy of omicron
+    3. fix timezone issue of get_bars/get_bars_batch, see #2
 
-# 1.0.8
-* change list
-    1. 增加涨跌停查询
-    2. 增加quota查询
-    3. 接口异步化
+## 0.3.2 (2020-12-04)
 
-# 1.1
-* change list
-    1. 增加除权除息信息查询
-    2. 获取证券列表接口get_security_list增加查询日期参数。
+* Alpha release of 0.3
+* Features:
+    1. get_bar
+    2. get_security_list
+    3. get_all_trade_days
+    4. get_bars_batch
+    5. get_valuation
+
+
+## 0.1.0 (2020-04-10)
+
+* First release on PyPI.
+
+
+
+
+
+
+
+
+
+
+
+

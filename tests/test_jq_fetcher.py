@@ -50,38 +50,38 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         end = arrow.get("2020-04-04").date()
         frame_type = "1d"
         bars = await self.fetcher.get_bars(sec, end, 10, frame_type)
-        self.assertEqual(bars[0]["frame"], arrow.get("2020-03-23").date())
-        self.assertEqual(bars[-1]["frame"], arrow.get("2020-04-03").date())
+        self.assertEqual(bars[0]["frame"].item().date(), arrow.get("2020-03-23").date())
+        self.assertEqual(bars[-1]["frame"].item().date(), arrow.get("2020-04-03").date())
 
         end = arrow.get("2020-04-03").date()
         frame_type = "1d"
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
-        self.assertEqual(bars[0]["frame"], arrow.get("2020-4-1").date())
-        self.assertEqual(bars[-1]["frame"], end)
+        self.assertEqual(bars[0]["frame"].item().date(), arrow.get("2020-4-1").date())
+        self.assertEqual(bars[-1]["frame"].item().date(), end)
 
         end = arrow.get("2020-04-03 10:30:00").naive
         frame_type = "30m"
         bars = await self.fetcher.get_bars(sec, end, 3, frame_type)
 
         self.assertEqual(
-            bars[0]["frame"],
+            bars[0]["frame"].item(),
             arrow.get("2020-04-02 15:00:00").naive,
         )
-        self.assertEqual(bars[-1]["frame"], end)
+        self.assertEqual(bars[-1]["frame"].item(), end)
 
         # 测试include_unclosed为False的情况
         import datetime
 
         end = datetime.date(2021, 2, 8)
         bars = await self.fetcher.get_bars(sec, end, 1, "1w", False)
-        self.assertEqual(datetime.date(2021, 2, 5), bars["frame"][0])
+        self.assertEqual(datetime.date(2021, 2, 5), bars["frame"][0].item().date())
 
         # 测试include_unclosed为True的情况
         sec = "000001.XSHE"
         end = datetime.date(2021, 2, 8)
         frame_type = "1w"
         bars = await self.fetcher.get_bars(sec, end, 1, frame_type, True)
-        self.assertEqual(datetime.date(2021, 2, 8), bars["frame"][0])
+        self.assertEqual(datetime.date(2021, 2, 8), bars["frame"][0].item().date())
 
     async def test_get_bars_with_exceptions(self):
         sec = "000001.XSHE"
@@ -100,14 +100,13 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         sec = "600891.XSHG"
         end = arrow.get("2020-03-05").date()
         bars = await self.fetcher.get_bars(sec, end, 7, "1d")
-        print(bars)
-        self.assertEqual(arrow.get("2020-2-21").date(), bars["frame"][0])
+        self.assertEqual(arrow.get("2020-2-21").date(), bars["frame"][0].item().date())
         self.assertAlmostEqual(1.25, bars[0]["open"], places=2)
 
-        self.assertEqual(arrow.get("2020-02-26").date(), bars["frame"][3])
+        self.assertEqual(arrow.get("2020-02-26").date(), bars["frame"][3].item().date())
         self.assertAlmostEqual(1.18, bars["open"][3], places=2)
 
-        self.assertEqual(arrow.get("2020-03-02").date(), bars["frame"][-1])
+        self.assertEqual(arrow.get("2020-03-02").date(), bars["frame"][-1].item().date())
         self.assertAlmostEqual(1.13, bars["open"][-1], places=2)
 
         # 600721, ST百花， 2020-4-29停牌一天
@@ -120,11 +119,11 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(6, len(bars))
         self.assertEqual(
             arrow.get("2020-04-27 15:00").naive,
-            bars["frame"][0],
+            bars["frame"][0].item(),
         )
         # 检查是否停牌日被跳过
-        self.assertEqual(arrow.get("2020-4-28 15:00").naive, bars["frame"][-2])
-        self.assertEqual(arrow.get("2020-04-30 10:30").naive, bars["frame"][-1])
+        self.assertEqual(arrow.get("2020-4-28 15:00").naive, bars["frame"][-2].item())
+        self.assertEqual(arrow.get("2020-04-30 10:30").naive, bars["frame"][-1].item())
         self.assertAlmostEqual(5.47, bars["open"][0], places=2)
         self.assertAlmostEqual(5.26, bars["open"][-1], places=2)
 
@@ -133,9 +132,9 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         bars = await self.fetcher.get_bars(sec, end, 7, "60m")
 
         self.assertEqual(7, len(bars))
-        self.assertEqual(arrow.get("2020-04-27 15:00").naive, bars["frame"][0])
-        self.assertEqual(arrow.get("2020-4-30 10:32").naive, bars["frame"][-1])
-        self.assertEqual(arrow.get("2020-04-30 10:30").naive, bars["frame"][-2])
+        self.assertEqual(arrow.get("2020-04-27 15:00").naive, bars["frame"][0].item())
+        self.assertEqual(arrow.get("2020-4-30 10:32").naive, bars["frame"][-1].item())
+        self.assertEqual(arrow.get("2020-04-30 10:30").naive, bars["frame"][-2].item())
 
         self.assertAlmostEqual(5.47, bars["open"][0], places=2)
         self.assertAlmostEqual(5.26, bars["open"][-2], places=2)
@@ -173,10 +172,10 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
         bars = await self.fetcher.get_bars_batch(secs, end_at, n_bars, frame_type)
 
         self.assertEqual(
-            bars["000001.XSHE"]["frame"][0], arrow.get("2020-10-19").date()
+            bars["000001.XSHE"]["frame"][0].item(), arrow.get("2020-10-19").naive
         )
         self.assertEqual(
-            bars["600000.XSHG"]["frame"][0], arrow.get("2020-10-19").date()
+            bars["600000.XSHG"]["frame"][0].item(), arrow.get("2020-10-19").naive
         )
 
     async def test_get_trade_price_limits(self):
@@ -270,48 +269,11 @@ class TestJQ(unittest.IsolatedAsyncioTestCase):
             n_bars=2,
             frame_type="1m",
         )
-        for i in bars:
-            if not len(bars[i]):
-                print(f"code:{i}为空")
-        print(bars)
         for code in price_bars:
-            bar1 = price_bars[code]
-            bar2 = bars[code]
-            self.assertEqual(len(bar1), len(bar2))
-            if len(bar1) != len(bar2):
-                print("长度不相等，错误")
-                break
-            for item1, item2 in zip(bar1, bar2):
-                # 判断字段是否相等
-                for field in [
-                    "frame",
-                    "open",
-                    "high",
-                    "low",
-                    "close",
-                    "volume",
-                    "amount",
-                ]:
-                    self.assertEqual(item1[field], item2[field])
-                    if field == "frame":
-                        if item1[field].strftime("%Y-%m-%d") != item2[field].strftime(
-                            "%Y-%m-%d"
-                        ):
-                            print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
-                            break
-                    elif item1[field] != item2[field]:
-                        print(f"不相等 item1:{item1}, item2:{item2}, field:{field}")
-                        break
-                else:
-                    continue
-                break
-            else:
-                continue
-            break
+            np.testing.assert_array_equal(price_bars[code]["frame"], bars[code]["frame"])
+            np.testing.assert_almost_equal(price_bars[code]["open"], bars[code]["open"], decimal=2)
+            np.testing.assert_almost_equal(price_bars[code]["close"], bars[code]["close"], decimal=2)
 
-        # fixme: 这里应该是判断结果是否符合预期，不能用打印来替代。如果actual != expected，需要让测试失败
-        print(bars)
-        print(price_bars)
 
     async def test_get_finance_xrxd_info(self):
         start = datetime.date(2021, 6, 17)
