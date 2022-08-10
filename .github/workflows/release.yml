@@ -32,18 +32,11 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: generate change log
-        uses: heinrichreimer/github-changelog-generator-action@v2.1.1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          issues: true
-          issuesWoLabels: true
-          pullRequests: true
-          prWoLabels: true
-          unreleased: true
-          addSections: '{"documentation":{"prefix":"**Documentation:**","labels":["documentation"]}}'
-          sinceTag: v0.3.6
-          output: CHANGELOG.md
+      - name: build change log
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v3.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v2
         with:
@@ -68,7 +61,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          body_path: ./CHANGELOG.md
+          body: ${{ steps.build_changelog.outputs.changelog }}
           files: dist/*.whl
           draft: false
           prerelease: false
@@ -79,3 +72,16 @@ jobs:
           user: __token__
           password: ${{ secrets.PYPI_API_TOKEN }}
           skip_existing: true
+
+      - name: Dingtalk Robot Notify
+        uses: leafney/dingtalk-action@v1.0.0
+        env: 
+          DINGTALK_ACCESS_TOKEN: ${{ secrets.DINGTALK_ACCESS_TOKEN }}
+          DINGTALK_SECRET: ${{ secrets.DINGTALK_SECRET }}
+        with:
+          msgtype: markdown
+          notify_when: 'success'
+          title: Release ${{ github.ref }}
+          text: |
+            ## 变更历史
+            ${{ steps.build_changelog.outputs.changelog }}            
