@@ -255,6 +255,10 @@ class Fetcher(QuotesFetcher):
         Returns:
             字典，其中key为股票代码，值为对应的行情数据，类型为bars_dtype.
         """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         if type(end_date) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
                 "end_at must by type of datetime.date or datetime.datetime or str"
@@ -485,6 +489,10 @@ class Fetcher(QuotesFetcher):
         Returns:
             np.array: [description]
         """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         if isinstance(codes, str):
             codes = [codes]
 
@@ -550,6 +558,10 @@ class Fetcher(QuotesFetcher):
 
             the frame is python datetime.date object
         """
+        if not self.connected:
+            logger.warning("not connected")
+            return None
+
         if type(dt) not in (str, datetime.date, datetime.datetime):
             raise TypeError(
                 "end_at must by type of datetime.date or datetime.datetime or str"
@@ -695,6 +707,7 @@ class Fetcher(QuotesFetcher):
         if not self.connected:
             logger.warning("not connected")
             return None
+
         if codes and isinstance(codes, str):
             codes = [codes]
         fund_count_q = jq.query(func.count(jq.finance.FUND_PORTFOLIO_STOCK.id))
@@ -812,6 +825,7 @@ class Fetcher(QuotesFetcher):
         if not self.connected:
             logger.warning("not connected")
             return None
+
         if codes and isinstance(codes, str):
             codes = [codes]
 
@@ -899,6 +913,10 @@ class Fetcher(QuotesFetcher):
         Returns:
             dict: quota
         """
+        if not self.connected:
+            logger.warning("not connected")
+            return {"total": 0, "spare": 0}
+
         quota = jq.get_query_count()
         assert "total" in quota
         assert "spare" in quota
@@ -916,6 +934,11 @@ class Fetcher(QuotesFetcher):
             account[: min(4, len(account))].ljust(7, "*"),
             password[:2],
         )
+        if account.startswith("ERROR"):
+            cls.connected = False
+            logger.warning("account of jqdatasdk not set")
+            return
+
         try:
             jq.auth(account, password)
             cls.connected = True
