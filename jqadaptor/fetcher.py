@@ -934,7 +934,7 @@ class Fetcher(QuotesFetcher):
             account[: min(4, len(account))].ljust(7, "*"),
             password[:2],
         )
-        if account.startswith("ERROR"):
+        if account.startswith("ERROR") or account.startswith("notset"):
             cls.connected = False
             logger.warning("account of jqdatasdk not set")
             return
